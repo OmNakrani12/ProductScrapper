@@ -19,6 +19,33 @@ PERSONAL_WEBMAIL_DOMAINS = {
     "comcast.net", "verizon.net", "sbcglobal.net", "fastmail.com"
 }
 
+# Disposable / Temporary Email Domains (Dummy & Trash Mails)
+DISPOSABLE_DOMAINS = {
+    "mailinator.com", "tempmail.com", "temp-mail.org", "yopmail.com", "10minutemail.com",
+    "guerrillamail.com", "trashmail.com", "dispostable.com", "getnada.com", "throwawaymail.com",
+    "sharklasers.com", "fakeinbox.com", "maildrop.cc", "inboxkitten.com", "mytemp.email",
+    "tempmail.net", "tempail.com", "mohmal.com", "generator.email", "crazymailing.com",
+    "mailnesia.com", "mailcatch.com", "anonymbox.com", "yopmail.net", "yopmail.fr",
+    "cool.fr.nf", "jetable.fr.nf", "nospam.ze.tc", "nomail.xl.cx", "mega.zik.dj",
+    "speed.1s.fr", "courriel.jp.net", "emailondeck.com", "getairmail.com", "temp-mail.io"
+}
+
+# Dummy, Placeholder & Template Domains
+DUMMY_DOMAINS = {
+    "example.com", "example.org", "example.net", "domain.com", "yourdomain.com",
+    "mycompany.com", "site.com", "yoursite.com", "email.com",
+    "test.com", "test.org", "sentry.io", "w3.org", "schema.org", "github.com",
+    "fontawesome.com", "google.com", "bootstrap.com", "wordpress.org", "gravatar.com",
+    "localhost", "invalid", "local", "mysite.com", "sample.com"
+}
+
+# Dummy / Non-Working / System Usernames
+DUMMY_USERNAMES = {
+    "noreply", "no-reply", "no_reply", "donotreply", "do_not_reply", "do-not-reply",
+    "bounce", "mailer-daemon", "null", "undefined", "none", "placeholder", "random",
+    "xxx", "xxxx", "123456", "abc", "qwerty", "fake", "invalid"
+}
+
 # Executive & Individual Title Keywords in Email Usernames
 EXECUTIVE_EMAIL_KEYWORDS = {
     "ceo", "founder", "co-founder", "cofounder", "owner", "president",
@@ -54,6 +81,47 @@ MOBILE_PHONE_PATTERNS = [
     r'^\+?41[-.\s]?7[6789]\d[-.\s]?\d{6}$',
     r'^\+?31[-.\s]?6[-.\s]?\d{8}$',
 ]
+
+def is_working_email(email: str, verify_dns: bool = False) -> bool:
+    """
+    Checks if an email address is a legitimate, working candidate email address
+    WITHOUT sending an actual email.
+    Filters out dummy, placeholder, disposable, and system emails.
+    """
+    if not email or not isinstance(email, str) or "@" not in email or len(email) > 100:
+        return False
+        
+    parts = email.strip().lower().split("@", 1)
+    if len(parts) != 2:
+        return False
+        
+    username, domain = parts
+    if not username or not domain:
+        return False
+        
+    # 1. Reject dummy / non-working usernames & prefixes
+    if username in DUMMY_USERNAMES:
+        return False
+    if username.startswith(("noreply", "no-reply", "donotreply", "do-not-reply", "dummy-", "test-")):
+        return False
+        
+    # 2. Reject disposable temp mail domains
+    if domain in DISPOSABLE_DOMAINS:
+        return False
+        
+    # 3. Reject dummy / placeholder domains
+    if domain in DUMMY_DOMAINS or any(domain.endswith("." + d) for d in DUMMY_DOMAINS):
+        return False
+        
+    # 4. Optional DNS host verification (without sending an email)
+    if verify_dns:
+        import socket
+        try:
+            socket.gethostbyname(domain)
+        except Exception:
+            return False
+            
+    return True
 
 def classify_email(email: str) -> str:
     """
@@ -140,6 +208,8 @@ def classify_emails_batch(emails: list[str]) -> tuple[list[str], list[str]]:
     personal = []
     business = []
     for e in emails:
+        if not is_working_email(e):
+            continue
         if classify_email(e) == "personal":
             personal.append(e)
         else:
@@ -157,10 +227,12 @@ def classify_phones_batch(phones: list[str], context: str = "") -> tuple[list[st
             business.append(p)
     return sorted(list(set(personal))), sorted(list(set(business)))
 
-def select_primary_email(emails: list[str], personal_emails: list[str] = None, business_emails: list[str] = None) -> str | None:
+def select_primary_email(emails: list[str], personal_emails: list[str] = None, business_emails: list[str] = None, verify_dns: bool = False) -> str | None:
     """
     Selects the single best email ID with highest response & decision-maker probability for cold outreach.
-    Priority order:
+    FIRST filters out any dummy, disposable, or invalid emails so ONLY working emails are considered.
+    
+    Priority order among working emails:
     1. Executive / Founder / Named Personal emails (ceo@, founder@, john.doe@, personal webmail @gmail.com)
     2. Direct Outreach Business Emails (hello@, hi@, team@, admin@, office@)
     3. General Business Emails (info@, contact@, sales@, support@)
@@ -177,20 +249,23 @@ def select_primary_email(emails: list[str], personal_emails: list[str] = None, b
     if not all_candidates:
         return None
 
-    # De-duplicate preserving order
-    unique_emails = []
+    # Step 1: Filter to ONLY working, non-dummy emails
+    working_emails = []
     seen = set()
     for e in all_candidates:
-        if e and isinstance(e, str) and e.strip().lower() not in seen:
+        if e and isinstance(e, str):
             clean_e = e.strip()
-            seen.add(clean_e.lower())
-            unique_emails.append(clean_e)
+            clean_lower = clean_e.lower()
+            if clean_lower not in seen and is_working_email(clean_e, verify_dns=verify_dns):
+                seen.add(clean_lower)
+                working_emails.append(clean_e)
 
-    if not unique_emails:
+    if not working_emails:
         return None
 
+    # Step 2: Score and rank the remaining working emails
     scored = []
-    for email in unique_emails:
+    for email in working_emails:
         score = 0
         parts = email.lower().split("@", 1)
         if len(parts) == 2:
@@ -226,3 +301,4 @@ def select_primary_email(emails: list[str], personal_emails: list[str] = None, b
 
     scored.sort(key=lambda x: x[0], reverse=True)
     return scored[0][1]
+

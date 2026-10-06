@@ -97,6 +97,25 @@ export async function deleteJob(jobId: string): Promise<void> {
   }
 }
 
+export async function sendCampaignEmail(payload: {
+  recipient_email: string;
+  subject: string;
+  body: string;
+  company_name?: string;
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_user?: string;
+  smtp_password?: string;
+  sender_name?: string;
+  sender_email?: string;
+}): Promise<any> {
+  return handleFetch(`${API_BASE}/jobs/campaign/send-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 export interface DiscoveredProduct {
   url: string;
   title: string;

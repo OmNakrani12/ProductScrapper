@@ -130,3 +130,94 @@ def delete_job_by_id(job_id: str, db: Session = Depends(get_db)):
     if not success:
         raise HTTPException(status_code=404, detail="Job not found.")
     return {"message": "Job deleted successfully", "job_id": job_id}
+
+import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from app.config import settings
+
+class SingleEmailSendRequest(BaseModel):
+    recipient_email: str
+    subject: str
+    body: str
+    company_name: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int | None = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    sender_name: str | None = None
+    sender_email: str | None = None
+
+@router.post("/campaign/send-email")
+async def send_campaign_email(payload: SingleEmailSendRequest):
+    """
+    Dispatches a REAL email to the recipient email address via SMTP server.
+    Validates SMTP credentials and returns genuine delivery receipts or detailed SMTP errors.
+    """
+    if not payload.recipient_email or "@" not in payload.recipient_email:
+        raise HTTPException(status_code=400, detail="Invalid recipient email address.")
+
+    # 1. Resolve SMTP credentials (from request payload or environment variables)
+    host = payload.smtp_host or getattr(settings, "SMTP_HOST", os.getenv("SMTP_HOST", ""))
+    port = payload.smtp_port or int(getattr(settings, "SMTP_PORT", os.getenv("SMTP_PORT", "587")))
+    user = payload.smtp_user or getattr(settings, "SMTP_USER", os.getenv("SMTP_USER", ""))
+    password = payload.smtp_password or getattr(settings, "SMTP_PASSWORD", os.getenv("SMTP_PASSWORD", ""))
+    sender_email = payload.sender_email or user or getattr(settings, "SMTP_FROM_EMAIL", os.getenv("SMTP_FROM_EMAIL", ""))
+    sender_name = payload.sender_name or getattr(settings, "SMTP_FROM_NAME", os.getenv("SMTP_FROM_NAME", "WebContact Outreach"))
+
+    # If no SMTP credentials provided, prompt the user to configure SMTP settings
+    if not host or not user or not password:
+        raise HTTPException(
+            status_code=400,
+            detail="SMTP Credentials Required: Please enter your SMTP Host, Username, and Password in the SMTP Settings panel to send real emails to your inbox."
+        )
+
+    # 2. Build MIME Email Message
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = payload.subject
+    msg["From"] = f"{sender_name} <{sender_email}>" if sender_name else sender_email
+    msg["To"] = payload.recipient_email
+
+    # Plaintext and HTML body
+    part_text = MIMEText(payload.body, "plain", "utf-8")
+    part_html = MIMEText(payload.body.replace("\n", "<br>"), "html", "utf-8")
+    msg.attach(part_text)
+    msg.attach(part_html)
+
+    # 3. Connect & Send via SMTP
+    try:
+        if port == 465:
+            server = smtplib.SMTP_SSL(host, port, timeout=15)
+        else:
+            server = smtplib.SMTP(host, port, timeout=15)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+
+        server.login(user, password)
+        server.sendmail(sender_email, [payload.recipient_email], msg.as_string())
+        server.quit()
+
+        return {
+            "status": "success",
+            "recipient": payload.recipient_email,
+            "detail": f"Real email delivered via SMTP ({host}:{port}) to {payload.recipient_email}."
+        }
+    except smtplib.SMTPAuthenticationError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"SMTP Authentication Failed: Incorrect username or password for {user} on {host}."
+        )
+    except smtplib.SMTPConnectError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"SMTP Connection Failed: Unable to connect to SMTP server {host}:{port}."
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"SMTP Delivery Error: {str(e)}"
+        )
+
+

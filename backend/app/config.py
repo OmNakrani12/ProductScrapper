@@ -3,11 +3,11 @@ import os
 try:
     from pydantic_settings import BaseSettings
     class Settings(BaseSettings):
-        PROJECT_NAME: str = "WebContact AI"
+        PROJECT_NAME: str = "ReachBot AI"
         API_V1_STR: str = "/api"
         
         # Database
-        DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./webcontact.db")
+        DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./reachbot.db")
         
         # Redis
         REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -20,8 +20,16 @@ try:
         USE_PLAYWRIGHT_FALLBACK: bool = os.getenv("USE_PLAYWRIGHT_FALLBACK", "true").lower() == "true"
         
         # Security
-        SECRET_KEY: str = os.getenv("SECRET_KEY", "webcontact_ai_secret_key_change_in_production")
+        SECRET_KEY: str = os.getenv("SECRET_KEY", "reachbot_ai_secret_key_change_in_production")
         ALLOWED_ORIGINS: list[str] = ["*"]
+
+        # Real SMTP Email Delivery
+        SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+        SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+        SMTP_USER: str = os.getenv("SMTP_USER", "")
+        SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+        SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
+        SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "ReachBot Outreach")
 
         model_config = {
             "case_sensitive": True,
@@ -31,11 +39,11 @@ try:
 
 except Exception:
     class Settings:
-        PROJECT_NAME: str = "WebContact AI"
+        PROJECT_NAME: str = "ReachBot AI"
         API_V1_STR: str = "/api"
         
         # Database
-        DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./webcontact.db")
+        DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./reachbot.db")
         
         # Redis
         REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -48,7 +56,14 @@ except Exception:
         USE_PLAYWRIGHT_FALLBACK: bool = os.getenv("USE_PLAYWRIGHT_FALLBACK", "true").lower() == "true"
         
         # Security
-        SECRET_KEY: str = os.getenv("SECRET_KEY", "webcontact_ai_secret_key_change_in_production")
+        SECRET_KEY: str = os.getenv("SECRET_KEY", "reachbot_ai_secret_key_change_in_production")
         ALLOWED_ORIGINS: list[str] = ["*"]
+        
+        SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+        SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+        SMTP_USER: str = os.getenv("SMTP_USER", "")
+        SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+        SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
+        SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "ReachBot Outreach")
 
 settings = Settings()

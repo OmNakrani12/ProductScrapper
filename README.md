@@ -1,8 +1,12 @@
-# WebContact AI 🚀
+<p align="center">
+  <img src="frontend/public/logo.png" width="160" alt="ReachBot AI Logo" />
+</p>
 
-**WebContact AI** is a production-grade automated contact intelligence SaaS application designed to extract publicly available company contact information (emails, phone numbers, contact/about page URLs, company metadata) from lists of target websites.
+# ReachBot AI 🚀
 
-![WebContact AI Banner](https://img.shields.value/badge/WebContact_AI-v1.0.0-orange.svg)
+**ReachBot AI** is a production-grade automated contact intelligence & cold outreach campaign SaaS application designed to extract publicly available company contact information (emails, phone numbers, contact/about page URLs, company metadata) from lists of target websites.
+
+![ReachBot AI Banner](https://img.shields.io/badge/ReachBot_AI-v2.4.0-cyan.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-14.2-black.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green.svg)
 ![Python](https://img.shields.io/badge/Python-3.10-blue.svg)
