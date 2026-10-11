@@ -142,6 +142,9 @@ class WebsiteResult(Base):
 
     @property
     def primary_email(self) -> str | None:
-        from app.scraper.classifier import select_primary_email
-        return select_primary_email(self.emails, self.personal_emails, self.business_emails)
+        try:
+            from app.scraper.classifier import select_primary_email
+            return select_primary_email(self.emails, self.personal_emails, self.business_emails)
+        except Exception:
+            return self.emails[0] if self.emails else None
 

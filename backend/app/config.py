@@ -13,9 +13,9 @@ try:
         REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         
         # Crawler Limits
-        MAX_PAGES_PER_SITE: int = int(os.getenv("MAX_PAGES_PER_SITE", "5"))
+        MAX_PAGES_PER_SITE: int = int(os.getenv("MAX_PAGES_PER_SITE", "3"))
         REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "15"))
-        MAX_CONCURRENT_SITES: int = int(os.getenv("MAX_CONCURRENT_SITES", "5"))
+        MAX_CONCURRENT_SITES: int = int(os.getenv("MAX_CONCURRENT_SITES", "2"))
         REQUEST_DELAY: float = float(os.getenv("REQUEST_DELAY", "0.5"))
         USE_PLAYWRIGHT_FALLBACK: bool = os.getenv("USE_PLAYWRIGHT_FALLBACK", "true").lower() == "true"
         
@@ -49,9 +49,9 @@ except Exception:
         REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         
         # Crawler Limits
-        MAX_PAGES_PER_SITE: int = int(os.getenv("MAX_PAGES_PER_SITE", "5"))
+        MAX_PAGES_PER_SITE: int = int(os.getenv("MAX_PAGES_PER_SITE", "3"))
         REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "15"))
-        MAX_CONCURRENT_SITES: int = int(os.getenv("MAX_CONCURRENT_SITES", "5"))
+        MAX_CONCURRENT_SITES: int = int(os.getenv("MAX_CONCURRENT_SITES", "2"))
         REQUEST_DELAY: float = float(os.getenv("REQUEST_DELAY", "0.5"))
         USE_PLAYWRIGHT_FALLBACK: bool = os.getenv("USE_PLAYWRIGHT_FALLBACK", "true").lower() == "true"
         

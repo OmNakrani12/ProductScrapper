@@ -36,14 +36,18 @@ export default function JobDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Fetch progress stats
-  const fetchProgress = useCallback(async () => {
+  const fetchProgress = useCallback(async (isInitial = false) => {
     if (!jobId) return;
     try {
       const data = await getJobProgress(jobId);
       setProgress(data);
+      setError(null);
       return data;
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch job status');
+      console.warn('Polling status warning:', err);
+      if (isInitial) {
+        setError(err.message || 'Failed to fetch job status');
+      }
     }
   }, [jobId]);
 
@@ -65,7 +69,7 @@ export default function JobDetailPage() {
       setResults(data.items);
       setTotalResults(data.total);
     } catch (err: any) {
-      console.error(err);
+      console.warn('Polling results warning:', err);
     }
   }, [jobId, currentPage, searchQuery, statusFilter, hasPersonalEmail, hasBusinessEmail, hasPrimaryEmail, hasContactInfo, hasSocialLinks, onlySuccess]);
 
@@ -75,13 +79,13 @@ export default function JobDetailPage() {
 
     const loadData = async () => {
       setIsLoading(true);
-      const prog = await fetchProgress();
+      const prog = await fetchProgress(true);
       await fetchResultsData(1, searchQuery, statusFilter, hasPersonalEmail, hasBusinessEmail, hasPrimaryEmail, hasContactInfo, hasSocialLinks, onlySuccess);
       setIsLoading(false);
 
       if (prog && (prog.status === 'processing' || prog.status === 'pending')) {
         interval = setInterval(async () => {
-          const updated = await fetchProgress();
+          const updated = await fetchProgress(false);
           await fetchResultsData(currentPage, searchQuery, statusFilter, hasPersonalEmail, hasBusinessEmail, hasPrimaryEmail, hasContactInfo, hasSocialLinks, onlySuccess);
           if (updated && (updated.status === 'completed' || updated.status === 'failed')) {
             clearInterval(interval);

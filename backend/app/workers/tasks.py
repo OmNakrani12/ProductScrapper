@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import gc
 from datetime import datetime
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
@@ -75,6 +76,7 @@ async def process_single_website(job_id: str, result_id: str, semaphore: asyncio
                 pass
         finally:
             db.close()
+            gc.collect()
 
 async def process_job_async(job_id: str):
     """Background task handler for processing a full job."""
