@@ -50,7 +50,7 @@ export default function LandingPage() {
 
         {/* Industrial Subtitle */}
         <p className="text-base sm:text-lg text-gray-300 leading-relaxed max-w-2xl mx-auto font-sans">
-          Crawl websites or directory databases automatically. Extract verified executive emails, direct mobile dials, and social metadata — <span className="text-cyan-300 font-semibold">with dummy emails filtered out completely</span>.
+          Crawl websites or directory databases automatically. Extract verified executive emails, decision-maker contacts, and social metadata — <span className="text-cyan-300 font-semibold">with dummy emails filtered out completely</span>.
         </p>
 
         {/* Industrial Feature Badges */}

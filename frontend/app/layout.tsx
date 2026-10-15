@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'ReachBot AI — Automated B2B Lead Intelligence & Cold Outreach Platform',
-  description: 'Extract 100% verified, deliverable decision-maker email addresses, mobile direct dials, and metadata from websites automatically.',
+  description: 'Extract 100% verified, deliverable decision-maker email addresses, company metadata, and social profiles automatically.',
 };
 
 export default function RootLayout({

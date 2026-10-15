@@ -2,6 +2,7 @@ import re
 import json
 import logging
 import asyncio
+import gc
 from urllib.parse import urlparse, parse_qs, unquote, urljoin
 from bs4 import BeautifulSoup
 import httpx
@@ -185,52 +186,76 @@ async def fetch_directory_content(norm_dir_url: str) -> tuple[str, bool]:
     except Exception as e:
         logger.warning(f"Tier 2 RSS feed fallback failed for {norm_dir_url}: {e}")
 
-    # Tier 3: Playwright Fallback
-    if settings.USE_PLAYWRIGHT_FALLBACK:
-        try:
-            from playwright.async_api import async_playwright
-            async with async_playwright() as p:
-                browser = None
-                for launch_kwargs in [
-                    {"headless": True, "args": ["--disable-blink-features=AutomationControlled", "--no-sandbox"]},
-                    {"headless": True, "channel": "chrome", "args": ["--disable-blink-features=AutomationControlled", "--no-sandbox"]},
-                    {"headless": True, "channel": "msedge", "args": ["--disable-blink-features=AutomationControlled", "--no-sandbox"]}
-                ]:
-                    try:
-                        browser = await p.chromium.launch(**launch_kwargs)
-                        break
-                    except Exception:
-                        continue
-
-                if browser:
-                    context = await browser.new_context(
-                        user_agent=HEADERS["User-Agent"],
-                        viewport={"width": 1366, "height": 768}
-                    )
-                    page = await context.new_page()
-                    await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined});")
-                    await page.goto(norm_dir_url, wait_until="domcontentloaded", timeout=settings.REQUEST_TIMEOUT * 1000)
-                    await page.wait_for_timeout(2500)
-                    pw_content = await page.content()
-                    await browser.close()
-
-                    if pw_content and "Just a moment..." not in pw_content and "Security verification" not in pw_content:
-                        logger.info(f"Tier 3 Playwright fetch succeeded for {norm_dir_url}")
-                        return pw_content, False
-        except Exception as pw_e:
-            logger.warning(f"Tier 3 Playwright fetch failed for {norm_dir_url}: {pw_e}")
-
-    # Tier 4: Jina AI Proxy Reader Fallback (bypasses Cloudflare anti-bot on ProductHunt, G2, Capterra, etc.)
+    # Tier 3: Jina AI Proxy Reader Fallback (bypasses Cloudflare anti-bot on ProductHunt, G2, Capterra, etc. with ZERO local RAM)
     try:
         jina_target = f"https://r.jina.ai/{norm_dir_url}"
-        logger.info(f"Tier 4 Jina AI Proxy fetch attempting for {jina_target}")
+        logger.info(f"Tier 3 Jina AI Proxy fetch attempting for {jina_target}")
         async with httpx.AsyncClient(timeout=20.0) as client:
             jina_resp = await client.get(jina_target, headers={"x-with-links-summary": "true", "User-Agent": HEADERS["User-Agent"]})
             if jina_resp.status_code == 200 and len(jina_resp.text) > 200:
-                logger.info(f"Tier 4 Jina AI Proxy fetch succeeded for {norm_dir_url}")
+                logger.info(f"Tier 3 Jina AI Proxy fetch succeeded for {norm_dir_url}")
                 return jina_resp.text, False
     except Exception as jina_e:
-        logger.warning(f"Tier 4 Jina AI Proxy fetch failed for {norm_dir_url}: {jina_e}")
+        logger.warning(f"Tier 3 Jina AI Proxy fetch failed for {norm_dir_url}: {jina_e}")
+
+    # Tier 4: Playwright Fallback (only if enabled and strictly memory-managed)
+    if settings.USE_PLAYWRIGHT_FALLBACK:
+        try:
+            from app.scraper.crawler import _PLAYWRIGHT_SEMAPHORE
+            async with _PLAYWRIGHT_SEMAPHORE:
+                from playwright.async_api import async_playwright
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        args=[
+                            "--no-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-gpu",
+                            "--disable-software-rasterizer",
+                            "--disable-extensions",
+                            "--disable-background-networking",
+                            "--disable-default-apps",
+                            "--disable-sync",
+                            "--disable-translate",
+                            "--metrics-recording-only",
+                            "--mute-audio",
+                            "--no-first-run",
+                            "--single-process",
+                            "--no-zygote",
+                            "--disable-setuid-sandbox",
+                            "--js-flags=--max-old-space-size=128",
+                        ]
+                    )
+                    context = await browser.new_context(
+                        user_agent=HEADERS["User-Agent"],
+                        viewport={"width": 1280, "height": 720}
+                    )
+                    page = await context.new_page()
+
+                    # Block heavy media/fonts to save RAM
+                    async def route_filter(route):
+                        req = route.request
+                        if req.resource_type in ["image", "media", "font", "stylesheet"]:
+                            await route.abort()
+                        else:
+                            await route.continue_()
+
+                    await page.route("**/*", route_filter)
+                    await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined});")
+                    await page.goto(norm_dir_url, wait_until="domcontentloaded", timeout=min(settings.REQUEST_TIMEOUT, 12) * 1000)
+                    await asyncio.sleep(1.0)
+                    pw_content = await page.content()
+                    await page.close()
+                    await context.close()
+                    await browser.close()
+
+                    if pw_content and "Just a moment..." not in pw_content and "Security verification" not in pw_content:
+                        logger.info(f"Tier 4 Playwright fetch succeeded for {norm_dir_url}")
+                        return pw_content, False
+        except Exception as pw_e:
+            logger.warning(f"Tier 4 Playwright fetch failed for {norm_dir_url}: {pw_e}")
+        finally:
+            gc.collect()
 
     return html_content, is_xml_feed
 
@@ -465,7 +490,8 @@ async def extract_directory_products_range(url_pattern: str, start_num: int, end
             target_urls.append(f"{clean_pattern.rstrip('/')}/{num}")
 
     discovered_all = {}
-    sem = asyncio.Semaphore(5)  # Concurrency limit for page fetches
+    concurrency_limit = min(settings.MAX_CONCURRENT_SITES, 2)
+    sem = asyncio.Semaphore(concurrency_limit)
 
     async def fetch_single(url: str):
         async with sem:
@@ -476,14 +502,18 @@ async def extract_directory_products_range(url_pattern: str, start_num: int, end
                 logger.warning(f"Batch extraction failed for {url}: {e}")
                 return []
 
-    results = await asyncio.gather(*[fetch_single(u) for u in target_urls], return_exceptions=True)
-
-    for res in results:
-        if isinstance(res, list):
-            for prod in res:
-                url_norm = prod.get("url")
-                if url_norm and url_norm not in discovered_all:
-                    discovered_all[url_norm] = prod
+    # Process in chunks of 4 to keep memory usage flat on low-RAM containers
+    batch_size = 4
+    for i in range(0, len(target_urls), batch_size):
+        chunk = target_urls[i:i + batch_size]
+        chunk_results = await asyncio.gather(*[fetch_single(u) for u in chunk], return_exceptions=True)
+        for res in chunk_results:
+            if isinstance(res, list):
+                for prod in res:
+                    url_norm = prod.get("url")
+                    if url_norm and url_norm not in discovered_all:
+                        discovered_all[url_norm] = prod
+        gc.collect()
 
     all_products = [p for p in discovered_all.values() if not is_ignored_domain(p.get("domain"))]
     return {

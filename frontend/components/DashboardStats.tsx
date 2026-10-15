@@ -1,4 +1,4 @@
-import { Globe, Mail, Phone, UserCheck, Smartphone, CheckCircle2, ShieldAlert, Sparkles } from 'lucide-react';
+import { Globe, Mail, UserCheck, CheckCircle2 } from 'lucide-react';
 import { JobProgress } from '@/types';
 
 interface DashboardStatsProps {
@@ -22,30 +22,23 @@ export default function DashboardStats({ stats }: DashboardStatsProps) {
       sub: "CEO, Founder & Named IDs"
     },
     {
-      title: "Direct Mobiles",
-      value: stats.personal_phones_found ?? 0,
-      icon: Smartphone,
-      color: "from-emerald-500/20 to-teal-600/10 text-emerald-300 border-emerald-500/30",
-      sub: "Cellular & Direct Dials"
-    },
-    {
       title: "Total Valid Emails",
       value: stats.emails_found,
       icon: Mail,
       color: "from-amber-500/20 to-orange-600/10 text-amber-300 border-amber-500/30",
-      sub: "No Dummy / Disposable Mails"
+      sub: "100% Verified Deliverable"
     },
     {
-      title: "All Phone Lines",
-      value: stats.phones_found,
-      icon: Phone,
-      color: "from-sky-500/20 to-blue-600/10 text-sky-300 border-sky-500/30",
-      sub: "Mobiles + Switchboards"
+      title: "Scraped Successfully",
+      value: stats.successful_websites,
+      icon: CheckCircle2,
+      color: "from-emerald-500/20 to-teal-600/10 text-emerald-300 border-emerald-500/30",
+      sub: `${Math.round((stats.successful_websites / (stats.total_websites || 1)) * 100)}% Success Rate`
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       {cards.map((c, i) => {
         const Icon = c.icon;
         return (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, ExternalLink, Mail, Phone, Building2, Layers, Clock, AlertTriangle, Check, Copy, UserCheck, Smartphone, Briefcase, Share2 } from 'lucide-react';
+import { X, ExternalLink, Mail, Building2, Layers, Clock, AlertTriangle, Check, Copy, UserCheck, Briefcase, Share2 } from 'lucide-react';
 import { WebsiteResult } from '@/types';
 import StatusBadge from './StatusBadge';
 import { formatDuration } from '@/lib/utils';
@@ -22,8 +22,7 @@ export default function ResultDetails({ result, onClose }: ResultDetailsProps) {
 
   const personalEmails = result.personal_emails || [];
   const businessEmails = result.business_emails || result.emails?.filter(e => !personalEmails.includes(e)) || [];
-  const personalPhones = result.personal_phones || [];
-  const businessPhones = result.business_phones || result.phone_numbers?.filter(p => !personalPhones.includes(p)) || [];
+
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity">
@@ -121,52 +120,16 @@ export default function ResultDetails({ result, onClose }: ResultDetailsProps) {
             )}
           </div>
 
-          {/* Personal Phone Numbers Section */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-emerald-400" />
-              <span>Personal Mobile & Direct Phone Numbers ({personalPhones.length})</span>
-            </h3>
-            {personalPhones.length > 0 ? (
-              <div className="space-y-2">
-                {personalPhones.map((phone, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-950/20 border border-emerald-500/30 group hover:border-emerald-400/50 transition-colors"
-                  >
-                    <span className="font-mono text-sm text-emerald-200 select-all">{phone}</span>
-                    <button
-                      onClick={() => copyToClipboard(phone)}
-                      className="p-1 rounded text-emerald-400 hover:text-white transition-colors"
-                      title="Copy personal phone"
-                    >
-                      {copiedItem === phone ? (
-                        <Check className="w-4 h-4 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-3 text-center rounded-lg bg-card/40 border border-border text-xs text-gray-500">
-                No personal mobile or direct phone numbers detected.
-              </div>
-            )}
-          </div>
-
           {/* General Business Contacts */}
           <div className="space-y-2 pt-2 border-t border-border">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
               <Briefcase className="w-4 h-4 text-gray-400" />
-              <span>General Business Contacts</span>
+              <span>General Business Email Aliases</span>
             </h3>
             
             <div className="space-y-2">
-              {businessEmails.length > 0 && (
+              {businessEmails.length > 0 ? (
                 <div className="space-y-1">
-                  <span className="text-[11px] text-gray-400 font-medium">Business Email Aliases:</span>
                   {businessEmails.map((email, idx) => (
                     <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-card border border-border text-xs font-mono text-gray-300">
                       <span>{email}</span>
@@ -176,25 +139,9 @@ export default function ResultDetails({ result, onClose }: ResultDetailsProps) {
                     </div>
                   ))}
                 </div>
-              )}
-
-              {businessPhones.length > 0 && (
-                <div className="space-y-1 mt-2">
-                  <span className="text-[11px] text-gray-400 font-medium">Switchboards & Toll-Free:</span>
-                  {businessPhones.map((phone, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-card border border-border text-xs font-mono text-gray-300">
-                      <span>{phone}</span>
-                      <button onClick={() => copyToClipboard(phone)} className="text-gray-400 hover:text-white">
-                        {copiedItem === phone ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {businessEmails.length === 0 && businessPhones.length === 0 && (
+              ) : (
                 <div className="p-3 text-center rounded-lg bg-card/20 border border-border text-xs text-gray-500">
-                  No generic business contact channels found.
+                  No generic business email aliases found.
                 </div>
               )}
             </div>

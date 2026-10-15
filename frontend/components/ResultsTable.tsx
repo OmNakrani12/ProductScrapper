@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, ExternalLink, Mail, Phone, ChevronRight, UserCheck, Smartphone, Info, Share2, CheckCircle2, Filter, Star, Copy, Check, Sparkles } from 'lucide-react';
+import { Search, ExternalLink, Mail, ChevronRight, UserCheck, Info, Share2, CheckCircle2, Filter, Star, Copy, Check, Sparkles } from 'lucide-react';
 import { WebsiteResult } from '@/types';
 import StatusBadge from './StatusBadge';
 import Pagination from './Pagination';
@@ -76,7 +76,7 @@ export default function ResultsTable({
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search by personal email, mobile phone, domain..."
+              placeholder="Search by personal email, domain, company..."
               className="w-full pl-10 pr-4 py-2.5 glass-input text-xs text-white placeholder-gray-500 rounded-xl transition-all font-sans"
             />
           </div>
@@ -162,7 +162,7 @@ export default function ResultsTable({
               <th className="py-3.5 px-4">Domain / Website</th>
               <th className="py-3.5 px-4">Status</th>
               <th className="py-3.5 px-4">Primary Outreach Email</th>
-              <th className="py-3.5 px-4 hidden md:table-cell">Personal / Mobile</th>
+              <th className="py-3.5 px-4 hidden md:table-cell">Executive / Personal Email</th>
               <th className="py-3.5 px-4 hidden lg:table-cell">Social Links</th>
               <th className="py-3.5 px-4 text-right">Action</th>
             </tr>
@@ -181,7 +181,6 @@ export default function ResultsTable({
                 const primaryMail = row.primary_email;
                 const personalMails = row.personal_emails || [];
                 const businessMails = row.business_emails || [];
-                const personalPhones = row.personal_phones || [];
 
                 return (
                   <tr
@@ -240,7 +239,7 @@ export default function ResultsTable({
                       )}
                     </td>
 
-                    {/* Personal Mails & Mobiles */}
+                    {/* Personal Mails */}
                     <td className="py-4 px-4 hidden md:table-cell">
                       <div className="space-y-1">
                         {personalMails.length > 0 ? (
@@ -255,13 +254,6 @@ export default function ResultsTable({
                           </div>
                         ) : (
                           <span className="text-gray-500 text-xs font-mono">—</span>
-                        )}
-
-                        {personalPhones.length > 0 && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-emerald-300 font-mono">
-                            <Smartphone className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-                            <span>{personalPhones[0]}</span>
-                          </div>
                         )}
                       </div>
                     </td>

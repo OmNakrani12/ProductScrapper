@@ -90,15 +90,19 @@ async def process_job_async(job_id: str):
         job.started_at = datetime.utcnow()
         db.commit()
 
-        # Fetch all website results to process
-        results = db.query(WebsiteResult).filter(WebsiteResult.job_id == job_id).all()
-        result_ids = [r.id for r in results]
+        # Fetch only website result IDs to save memory
+        results = db.query(WebsiteResult.id).filter(WebsiteResult.job_id == job_id).all()
+        result_ids = [r[0] for r in results]
         db.close()
 
         semaphore = asyncio.Semaphore(settings.MAX_CONCURRENT_SITES)
-        tasks = [process_single_website(job_id, r_id, semaphore) for r_id in result_ids]
-        
-        await asyncio.gather(*tasks)
+        # Process in batches to keep memory usage minimal and prevent coroutine bloat
+        batch_size = max(settings.MAX_CONCURRENT_SITES * 2, 4)
+        for i in range(0, len(result_ids), batch_size):
+            chunk = result_ids[i:i + batch_size]
+            tasks = [process_single_website(job_id, r_id, semaphore) for r_id in chunk]
+            await asyncio.gather(*tasks)
+            gc.collect()
 
         # Mark job completed
         db = SessionLocal()

@@ -54,3 +54,29 @@ def test_extract_company_name():
     '''
     company = extract_company_name("https://acme.com", html)
     assert company == "Acme Corp"
+
+import pytest
+from unittest.mock import patch, AsyncMock
+from app.scraper.crawler import crawl_website
+
+@pytest.mark.asyncio
+async def test_crawler_skips_phones_when_disabled():
+    html_mock = '''
+    <html>
+        <body>
+            <h1>Acme Inc</h1>
+            <a href="mailto:ceo@acme.com">ceo@acme.com</a>
+            <p>Direct mobile: +1 415 555 2671</p>
+        </body>
+    </html>
+    '''
+    with patch("app.scraper.crawler.fetch_page_httpx") as mock_fetch:
+        mock_fetch.return_value = (html_mock, "Acme Inc ceo@acme.com Direct mobile: +1 415 555 2671", 200)
+        with patch("app.config.settings.EXTRACT_PHONES", False):
+            result = await crawl_website("https://acme.com")
+            assert "ceo@acme.com" in result["emails"]
+            # Phones must be completely skipped and empty
+            assert result["phone_numbers"] == []
+            assert result["personal_phones"] == []
+            assert result["business_phones"] == []
+

@@ -17,7 +17,9 @@ try:
         REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "15"))
         MAX_CONCURRENT_SITES: int = int(os.getenv("MAX_CONCURRENT_SITES", "2"))
         REQUEST_DELAY: float = float(os.getenv("REQUEST_DELAY", "0.5"))
-        USE_PLAYWRIGHT_FALLBACK: bool = os.getenv("USE_PLAYWRIGHT_FALLBACK", "true").lower() == "true"
+        USE_PLAYWRIGHT_FALLBACK: bool = os.getenv("USE_PLAYWRIGHT_FALLBACK", "false").lower() == "true"
+        MAX_RESPONSE_BODY_BYTES: int = int(os.getenv("MAX_RESPONSE_BODY_BYTES", "2500000"))
+        EXTRACT_PHONES: bool = os.getenv("EXTRACT_PHONES", "false").lower() == "true"
         
         # Security
         SECRET_KEY: str = os.getenv("SECRET_KEY", "reachbot_ai_secret_key_change_in_production")
@@ -53,7 +55,9 @@ except Exception:
         REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "15"))
         MAX_CONCURRENT_SITES: int = int(os.getenv("MAX_CONCURRENT_SITES", "2"))
         REQUEST_DELAY: float = float(os.getenv("REQUEST_DELAY", "0.5"))
-        USE_PLAYWRIGHT_FALLBACK: bool = os.getenv("USE_PLAYWRIGHT_FALLBACK", "true").lower() == "true"
+        USE_PLAYWRIGHT_FALLBACK: bool = os.getenv("USE_PLAYWRIGHT_FALLBACK", "false").lower() == "true"
+        MAX_RESPONSE_BODY_BYTES: int = int(os.getenv("MAX_RESPONSE_BODY_BYTES", "2500000"))
+        EXTRACT_PHONES: bool = os.getenv("EXTRACT_PHONES", "false").lower() == "true"
         
         # Security
         SECRET_KEY: str = os.getenv("SECRET_KEY", "reachbot_ai_secret_key_change_in_production")
