@@ -1,15 +1,21 @@
-import { useState } from 'react';
-import { X, ExternalLink, Mail, Building2, Layers, Clock, AlertTriangle, Check, Copy, UserCheck, Briefcase, Share2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { 
+  X, ExternalLink, Mail, Building2, Layers, Clock, AlertTriangle, 
+  Check, Copy, UserCheck, Briefcase, Share2, Sparkles, RefreshCw, Send, Globe, Key 
+} from 'lucide-react';
 import { WebsiteResult } from '@/types';
 import StatusBadge from './StatusBadge';
 import { formatDuration } from '@/lib/utils';
+import AIEmailBox from './AIEmailBox';
 
 interface ResultDetailsProps {
   result: WebsiteResult | null;
+  jobId?: string;
   onClose: () => void;
+  onUpdated?: (updated: WebsiteResult) => void;
 }
 
-export default function ResultDetails({ result, onClose }: ResultDetailsProps) {
+export default function ResultDetails({ result, jobId, onClose, onUpdated }: ResultDetailsProps) {
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
 
   if (!result) return null;
@@ -22,7 +28,6 @@ export default function ResultDetails({ result, onClose }: ResultDetailsProps) {
 
   const personalEmails = result.personal_emails || [];
   const businessEmails = result.business_emails || result.emails?.filter(e => !personalEmails.includes(e)) || [];
-
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity">
@@ -39,7 +44,7 @@ export default function ResultDetails({ result, onClose }: ResultDetailsProps) {
                 {result.company_name || 'Website Detail'}
               </h2>
               <a
-                href={result.website_url}
+                href={result.website_url.startsWith('http') ? result.website_url : `https://${result.website_url}`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline font-mono mt-1"
@@ -85,6 +90,17 @@ export default function ResultDetails({ result, onClose }: ResultDetailsProps) {
             </div>
           )}
 
+          {/* ------------------------------------------------------------- */}
+          {/* FEATURE: UNIFIED DEDICATED AI RESPONSE EMAIL BOX              */}
+          {/* ------------------------------------------------------------- */}
+          <div className="space-y-1.5">
+            <AIEmailBox
+              result={result}
+              jobId={jobId}
+              onUpdated={onUpdated}
+            />
+          </div>
+
           {/* Personal Emails Section */}
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-purple-300 uppercase tracking-wider flex items-center gap-2">
@@ -98,83 +114,94 @@ export default function ResultDetails({ result, onClose }: ResultDetailsProps) {
                     key={idx}
                     className="flex items-center justify-between p-2.5 rounded-lg bg-purple-950/20 border border-purple-500/30 group hover:border-purple-400/50 transition-colors"
                   >
-                    <span className="font-mono text-sm text-purple-200 select-all">{email}</span>
+                    <div className="flex items-center gap-2 font-mono text-xs text-purple-200 font-medium truncate max-w-[340px]">
+                      <Mail className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                      <span className="truncate">{email}</span>
+                    </div>
                     <button
                       onClick={() => copyToClipboard(email)}
                       className="p-1 rounded text-purple-400 hover:text-white transition-colors"
-                      title="Copy personal email"
+                      title="Copy email"
                     >
                       {copiedItem === email ? (
-                        <Check className="w-4 h-4 text-emerald-400" />
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
                       ) : (
-                        <Copy className="w-4 h-4" />
+                        <Copy className="w-3.5 h-3.5" />
                       )}
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-3 text-center rounded-lg bg-card/40 border border-border text-xs text-gray-500">
-                No personal/named email addresses detected.
+              <div className="p-3 text-center rounded-lg bg-card/20 border border-border text-xs text-gray-500">
+                No personal executive emails found.
               </div>
             )}
           </div>
 
-          {/* General Business Contacts */}
-          <div className="space-y-2 pt-2 border-t border-border">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-gray-400" />
-              <span>General Business Email Aliases</span>
+          {/* Business Emails Section */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+              <Mail className="w-4 h-4 text-cyan-400" />
+              <span>Business & General Emails ({businessEmails.length})</span>
             </h3>
-            
-            <div className="space-y-2">
-              {businessEmails.length > 0 ? (
-                <div className="space-y-1">
-                  {businessEmails.map((email, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-card border border-border text-xs font-mono text-gray-300">
-                      <span>{email}</span>
-                      <button onClick={() => copyToClipboard(email)} className="text-gray-400 hover:text-white">
-                        {copiedItem === email ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
+            {businessEmails.length > 0 ? (
+              <div className="space-y-2">
+                {businessEmails.map((email, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border group hover:border-gray-600 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 font-mono text-xs text-gray-200 truncate max-w-[340px]">
+                      <Mail className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                      <span className="truncate">{email}</span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-3 text-center rounded-lg bg-card/20 border border-border text-xs text-gray-500">
-                  No generic business email aliases found.
-                </div>
-              )}
-            </div>
+                    <button
+                      onClick={() => copyToClipboard(email)}
+                      className="p-1 rounded text-gray-400 hover:text-white transition-colors"
+                      title="Copy email"
+                    >
+                      {copiedItem === email ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-3 text-center rounded-lg bg-card/20 border border-border text-xs text-gray-500">
+                No general business emails found.
+              </div>
+            )}
           </div>
 
-          {/* Social Media Profiles Section */}
-          <div className="space-y-2 pt-2 border-t border-border">
-            <h3 className="text-xs font-semibold text-sky-300 uppercase tracking-wider flex items-center gap-2">
-              <Share2 className="w-4 h-4 text-sky-400" />
+          {/* Social Profiles */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-indigo-400" />
               <span>Social Media Profiles</span>
             </h3>
-
             {result.social_links && Object.keys(result.social_links).length > 0 ? (
               <div className="space-y-2">
                 {Object.entries(result.social_links).map(([platform, urls]) => {
                   if (!urls || urls.length === 0) return null;
                   return (
-                    <div key={platform} className="p-3 rounded-xl bg-card border border-border space-y-1.5">
-                      <span className="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-accent inline-block"></span>
-                        {platform} ({urls.length})
+                    <div key={platform} className="p-2.5 rounded-lg bg-card border border-border space-y-1.5">
+                      <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                        {platform}
                       </span>
                       <div className="space-y-1">
                         {urls.map((url, i) => (
-                          <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-surface/60 border border-border/80 text-xs">
+                          <div key={i} className="flex items-center justify-between text-xs font-mono">
                             <a
                               href={url}
                               target="_blank"
                               rel="noreferrer"
-                              className="font-mono text-accent hover:underline truncate max-w-[260px] flex items-center gap-1"
+                              className="text-accent hover:underline truncate max-w-[320px]"
                             >
-                              <span className="truncate">{url}</span>
-                              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                              {url}
                             </a>
                             <button
                               onClick={() => copyToClipboard(url)}

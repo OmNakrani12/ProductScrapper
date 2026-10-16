@@ -31,6 +31,12 @@ class WebsiteResult(Base):
     status = Column(String(50), default="pending")  # success, failed, no_contact_found
     error_message = Column(Text, nullable=True)
     
+    # AI Email Generation Fields
+    ai_email_subject = Column(String(500), nullable=True)
+    ai_email_body = Column(Text, nullable=True)
+    ai_email_generated_at = Column(DateTime, nullable=True)
+    ai_email_prompt = Column(Text, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

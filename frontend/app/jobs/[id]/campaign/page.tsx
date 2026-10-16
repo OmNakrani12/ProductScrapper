@@ -4,21 +4,49 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   ArrowLeft, Send, Play, Pause, RefreshCw, CheckCircle2, XCircle, Clock, 
-  Trash2, Plus, Edit3, Sparkles, Mail, ShieldAlert, FileText, Check, AlertCircle, ExternalLink, Globe 
+  Trash2, Plus, Edit3, Sparkles, Mail, ShieldAlert, FileText, Check, AlertCircle, 
+  ExternalLink, Globe, Key, Settings, CheckCircle, Flame, Eye, Save, X, RotateCcw,
+  ChevronLeft, ChevronRight, Copy
 } from 'lucide-react';
-import { getJobProgress, getJobResults, sendCampaignEmail } from '@/lib/api';
-import { JobProgress, WebsiteResult } from '@/types';
+import { 
+  getJobProgress, 
+  getJobResults, 
+  sendCampaignEmail, 
+  generateAIEmail, 
+  getGeminiKeysStatus, 
+  addGeminiKeys, 
+  testGeminiKey,
+  updateResultAIEmail
+} from '@/lib/api';
+import { JobProgress, WebsiteResult, GeminiPoolStatus } from '@/types';
+import GeminiKeyManagerModal from '@/components/GeminiKeyManagerModal';
+
+export interface AssociatedWebsite {
+  result_id?: string;
+  website_url: string;
+  domain: string;
+  company_name: string;
+}
 
 interface CampaignRecipient {
   id: string;
+  result_id?: string;
+  result_ids?: string[];
   email: string;
   website_url: string;
   domain: string;
   company_name: string;
+  websites?: AssociatedWebsite[];
   isSelected: boolean;
   status: 'pending' | 'sending' | 'sent' | 'failed';
   error?: string;
   sentAt?: string;
+  // AI Email fields
+  ai_subject?: string;
+  ai_body?: string;
+  ai_prompt?: string;
+  isAiGenerating?: boolean;
+  useAiDraft?: boolean;
 }
 
 export default function EmailCampaignPage() {
@@ -34,11 +62,69 @@ export default function EmailCampaignPage() {
   const [newCompanyInput, setNewCompanyInput] = useState('');
   const [newWebsiteInput, setNewWebsiteInput] = useState('');
 
-  // Email Content State
+  // Fallback Campaign Template State
   const [subject, setSubject] = useState('Exclusive Partnership Inquiry for {company_name}');
   const [body, setBody] = useState(
     `Hello {company_name} Team,\n\nI am reaching out regarding your website at {website}.\n\nWe noticed your platform and would love to discuss a potential collaboration with {company_name}.\n\nWould you be open to a quick 5-minute call this week?\n\nBest regards,\nOutreach Manager`
   );
+
+  // Gemini AI Email Generator State
+  const GEMINI_MODELS = [
+    {
+      id: 'gemini-3.8-flash',
+      name: 'Gemini 3.8 Flash',
+      badge: 'Recommended',
+      useCase: 'Coding, chatbots, reasoning, and AI agents'
+    },
+    {
+      id: 'gemini-3.6-flash',
+      name: 'Gemini 3.6 Flash',
+      badge: 'Multimodal',
+      useCase: 'General-purpose tasks and multimodal applications'
+    },
+    {
+      id: 'gemini-3.5-flash-lite',
+      name: 'Gemini 3.5 Flash Lite',
+      badge: 'High-Volume',
+      useCase: 'Fast, cost-efficient, high-volume requests'
+    },
+    {
+      id: 'gemini-4-argon',
+      name: 'Gemini 4 Argon',
+      badge: 'Deep Reasoning',
+      useCase: 'Complex coding, mathematics, and advanced reasoning'
+    }
+  ];
+
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.8-flash');
+  const [aiInstruction, setAiInstruction] = useState<string>(
+    'Visit all websites and invite that website host to host platform. Highlight our 99.99% uptime, ultra-low latency, and free migration assistance.'
+  );
+  const [isBatchAiGenerating, setIsBatchAiGenerating] = useState<boolean>(false);
+  const [aiProgressText, setAiProgressText] = useState<string>('');
+
+  // Gemini Key Rotator State & Modal
+  const [showKeysModal, setShowKeysModal] = useState<boolean>(false);
+  const [customKeyInput, setCustomKeyInput] = useState<string>('');
+  const [savedKeys, setSavedKeys] = useState<string[]>([]);
+  const [geminiPoolStatus, setGeminiPoolStatus] = useState<GeminiPoolStatus | null>(null);
+  const [testKeyStatus, setTestKeyStatus] = useState<{ testing: boolean; message?: string; valid?: boolean } | null>(null);
+
+  // Recipient AI Draft View / Edit Modal & Box State
+  const [editingRecipient, setEditingRecipient] = useState<CampaignRecipient | null>(null);
+  const [editAiSubject, setEditAiSubject] = useState<string>('');
+  const [editAiBody, setEditAiBody] = useState<string>('');
+  const [isSingleRegenerating, setIsSingleRegenerating] = useState<boolean>(false);
+
+  // Dedicated AI Response Email Box State
+  const [previewLeadId, setPreviewLeadId] = useState<string>('');
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopyText = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Real SMTP Email Server Credentials
   const [smtpHost, setSmtpHost] = useState<string>('smtp.gmail.com');
@@ -66,6 +152,36 @@ export default function EmailCampaignPage() {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
+  // Load Gemini Keys from localStorage and Backend Key Rotator Status
+  const refreshKeyStatus = async () => {
+    try {
+      const status = await getGeminiKeysStatus();
+      setGeminiPoolStatus(status);
+    } catch (e) {
+      console.warn('Could not fetch Gemini key status:', e);
+    }
+  };
+
+  useEffect(() => {
+    // 1. Check local storage for keys
+    try {
+      const stored = localStorage.getItem('reachbot_gemini_keys');
+      if (stored) {
+        const keysArr = JSON.parse(stored);
+        if (Array.isArray(keysArr) && keysArr.length > 0) {
+          setSavedKeys(keysArr);
+          setCustomKeyInput(keysArr.join('\n'));
+          // Sync keys to backend rotator pool
+          addGeminiKeys(keysArr).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('Local storage keys error:', e);
+    }
+
+    refreshKeyStatus();
+  }, []);
+
   // Quick SMTP Server Presets
   const applySmtpPreset = (provider: 'gmail' | 'outlook' | 'mailtrap') => {
     if (provider === 'gmail') {
@@ -77,6 +193,27 @@ export default function EmailCampaignPage() {
     } else if (provider === 'mailtrap') {
       setSmtpHost('sandbox.smtp.mailtrap.io');
       setSmtpPort(2525);
+    }
+  };
+
+  // Quick AI Prompt Presets
+  const applyPromptPreset = (preset: string) => {
+    if (preset === 'host') {
+      setAiInstruction(
+        'Visit this website and invite that website host to host their platform with us. Highlight our 99.99% uptime, ultra-low latency, 24/7 dedicated migration assistance, and special welcome credits.'
+      );
+    } else if (preset === 'partner') {
+      setAiInstruction(
+        'Explore this website and craft an authentic B2B strategic partnership and collaboration pitch tailored to their core services.'
+      );
+    } else if (preset === 'audit') {
+      setAiInstruction(
+        'Review this website and offer a complimentary performance, security, and SEO audit with actionable optimization findings.'
+      );
+    } else if (preset === 'pitch') {
+      setAiInstruction(
+        'Write a persuasive B2B cold outreach pitch introducing our software platform and asking for a short 5-minute exploratory chat this week.'
+      );
     }
   };
 
@@ -93,9 +230,8 @@ export default function EmailCampaignPage() {
         // Fetch all results for this job (up to 2000 items)
         const data = await getJobResults(jobId, 1, 2000, '', 'all', false, false, false);
 
-        // Extract primary emails from ALL scraped website results
-        const recipientList: CampaignRecipient[] = [];
-        const seen = new Set<string>();
+        // Extract primary emails from ALL scraped website results and group multi-site hosts
+        const recipientMap = new Map<string, CampaignRecipient>();
 
         data.items.forEach((item, index) => {
           // Resolve best primary working email with fallbacks
@@ -104,28 +240,69 @@ export default function EmailCampaignPage() {
             (item.business_emails && item.business_emails.length > 0 ? item.business_emails[0] : null) || 
             (item.emails && item.emails.length > 0 ? item.emails[0] : null);
 
-          if (primaryEmail && primaryEmail.trim() && !seen.has(primaryEmail.trim().toLowerCase())) {
-            const cleanEmail = primaryEmail.trim();
-            seen.add(cleanEmail.toLowerCase());
+          if (!primaryEmail || !primaryEmail.trim()) return;
 
-            const rawWebsite = item.website_url || '';
-            const websiteUrl = rawWebsite.startsWith('http') ? rawWebsite : `https://${rawWebsite}`;
-            const domain = rawWebsite.replace(/^https?:\/\//i, '').split('/')[0];
+          const cleanEmail = primaryEmail.trim();
+          const emailKey = cleanEmail.toLowerCase();
 
-            recipientList.push({
+          const rawWebsite = item.website_url || '';
+          const websiteUrl = rawWebsite.startsWith('http') ? rawWebsite : `https://${rawWebsite}`;
+          const domain = rawWebsite.replace(/^https?:\/\//i, '').split('/')[0] || rawWebsite;
+          const companyName = item.company_name || domain;
+
+          const currentSite: AssociatedWebsite = {
+            result_id: item.id,
+            website_url: websiteUrl,
+            domain: domain,
+            company_name: companyName,
+          };
+
+          if (recipientMap.has(emailKey)) {
+            const existing = recipientMap.get(emailKey)!;
+            const alreadyHasSite = existing.websites?.some(w => w.website_url.toLowerCase() === websiteUrl.toLowerCase());
+            if (!alreadyHasSite) {
+              existing.websites = [...(existing.websites || []), currentSite];
+            }
+            if (item.id && !existing.result_ids?.includes(item.id)) {
+              existing.result_ids = [...(existing.result_ids || []), item.id];
+            }
+            if (!existing.ai_body && item.ai_email_body) {
+              existing.ai_subject = item.ai_email_subject || undefined;
+              existing.ai_body = item.ai_email_body || undefined;
+              existing.ai_prompt = item.ai_email_prompt || undefined;
+              existing.useAiDraft = true;
+            }
+          } else {
+            recipientMap.set(emailKey, {
               id: `rec_${index}_${Date.now()}`,
+              result_id: item.id,
+              result_ids: item.id ? [item.id] : [],
               email: cleanEmail,
               website_url: websiteUrl,
               domain: domain,
-              company_name: item.company_name || domain,
+              company_name: companyName,
+              websites: [currentSite],
               isSelected: true,
               status: 'pending',
+              ai_subject: item.ai_email_subject || undefined,
+              ai_body: item.ai_email_body || undefined,
+              ai_prompt: item.ai_email_prompt || undefined,
+              useAiDraft: Boolean(item.ai_email_body && item.ai_email_subject)
             });
           }
         });
 
+        const recipientList = Array.from(recipientMap.values());
         setRecipients(recipientList);
-        addLog(`Successfully loaded ${recipientList.length} primary working email recipients from scraped dataset.`);
+        const multiSiteCount = recipientList.filter(r => (r.websites?.length || 1) > 1).length;
+        const aiDraftCount = recipientList.filter(r => r.ai_body).length;
+        const firstWithAi = recipientList.find(r => r.ai_body);
+        if (firstWithAi) {
+          setPreviewLeadId(firstWithAi.id);
+        } else if (recipientList.length > 0) {
+          setPreviewLeadId(recipientList[0].id);
+        }
+        addLog(`Loaded ${recipientList.length} unique host recipients (${data.items.length} total scraped websites, ${multiSiteCount} multi-site hosts operating 2+ domains, ${aiDraftCount} AI drafts ready).`);
       } catch (err: any) {
         addLog(`Error loading recipients: ${err.message}`);
       } finally {
@@ -189,14 +366,45 @@ export default function EmailCampaignPage() {
     }
 
     const domain = rawWebsite.replace(/^https?:\/\//i, '').split('/')[0];
+    const companyName = newCompanyInput.trim() || domain;
+    const cleanEmail = newEmailInput.trim();
+    const emailLower = cleanEmail.toLowerCase();
+
+    // Check if host with this email already exists in recipients
+    const existingIdx = recipients.findIndex(r => r.email.toLowerCase() === emailLower);
+    if (existingIdx !== -1) {
+      setRecipients((prev) =>
+        prev.map((r, idx) => {
+          if (idx === existingIdx) {
+            const alreadyHas = r.websites?.some(w => w.website_url.toLowerCase() === rawWebsite.toLowerCase());
+            const updatedWebsites = alreadyHas 
+              ? r.websites 
+              : [...(r.websites || [{ website_url: r.website_url, domain: r.domain, company_name: r.company_name }]), { website_url: rawWebsite, domain, company_name: companyName }];
+            return {
+              ...r,
+              websites: updatedWebsites
+            };
+          }
+          return r;
+        })
+      );
+      setNewEmailInput('');
+      setNewCompanyInput('');
+      setNewWebsiteInput('');
+      addLog(`Added website ${rawWebsite} to existing host recipient ${cleanEmail}.`);
+      return;
+    }
+
     const newRec: CampaignRecipient = {
       id: `custom_${Date.now()}`,
-      email: newEmailInput.trim(),
+      email: cleanEmail,
       website_url: rawWebsite,
       domain: domain,
-      company_name: newCompanyInput.trim() || domain,
+      company_name: companyName,
+      websites: [{ website_url: rawWebsite, domain, company_name: companyName }],
       isSelected: true,
       status: 'pending',
+      useAiDraft: false
     };
 
     setRecipients((prev) => [...prev, newRec]);
@@ -204,6 +412,228 @@ export default function EmailCampaignPage() {
     setNewCompanyInput('');
     setNewWebsiteInput('');
     addLog(`Manually added ${newRec.email} (${newRec.website_url}) to campaign list.`);
+  };
+
+  // Save Gemini Keys to localStorage & sync with backend rotator
+  const handleSaveGeminiKeys = async () => {
+    const rawLines = customKeyInput.split(/[\n,;]+/).map(k => k.trim()).filter(Boolean);
+    if (rawLines.length === 0) {
+      alert('Please enter at least one Gemini API key.');
+      return;
+    }
+
+    try {
+      localStorage.setItem('reachbot_gemini_keys', JSON.stringify(rawLines));
+      setSavedKeys(rawLines);
+      await addGeminiKeys(rawLines);
+      await refreshKeyStatus();
+      addLog(`Gemini Key Rotator: registered ${rawLines.length} keys in pool with auto-failover.`);
+      setShowKeysModal(false);
+    } catch (e: any) {
+      alert(`Error saving Gemini keys: ${e.message}`);
+    }
+  };
+
+  // Test single Gemini key
+  const handleTestKey = async (key: string) => {
+    if (!key.trim()) return;
+    setTestKeyStatus({ testing: true });
+    try {
+      const res = await testGeminiKey(key.trim(), selectedModel);
+      setTestKeyStatus({
+        testing: false,
+        valid: res.valid,
+        message: res.message
+      });
+      refreshKeyStatus();
+    } catch (e: any) {
+      setTestKeyStatus({
+        testing: false,
+        valid: false,
+        message: e.message || 'Verification failed.'
+      });
+    }
+  };
+
+  // -------------------------------------------------------------
+  // AI Email Generator: Batch Generation with Key Rotator
+  // -------------------------------------------------------------
+  const handleGenerateAllAiEmails = async () => {
+    const selected = recipients.filter(r => r.isSelected);
+    if (selected.length === 0) {
+      alert('Please select at least one recipient to generate AI email responses.');
+      return;
+    }
+
+    if (!aiInstruction.trim()) {
+      alert('Please enter an instruction/prompt for the AI (e.g. "Invite website host to host platform").');
+      return;
+    }
+
+    setIsBatchAiGenerating(true);
+    addLog(`✨ AI Email Generator started for ${selected.length} leads with instruction: "${aiInstruction.slice(0, 70)}..."`);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < selected.length; i++) {
+      const rec = selected[i];
+      setAiProgressText(`Generating lead ${i + 1} of ${selected.length} (${rec.domain})...`);
+
+      // Mark single generating indicator
+      setRecipients(prev => prev.map(r => r.id === rec.id ? { ...r, isAiGenerating: true } : r));
+
+      try {
+        const allSites = rec.websites && rec.websites.length > 0
+          ? rec.websites.map(w => w.website_url)
+          : [rec.website_url];
+        const allCompanies = rec.websites && rec.websites.length > 0
+          ? rec.websites.map(w => w.company_name)
+          : [rec.company_name];
+        const resultIds = rec.result_ids && rec.result_ids.length > 0
+          ? rec.result_ids
+          : (rec.result_id ? [rec.result_id] : undefined);
+
+        const aiResponse = await generateAIEmail({
+          user_instruction: aiInstruction,
+          website_url: rec.website_url,
+          websites: allSites.length > 1 ? allSites : undefined,
+          company_name: rec.company_name,
+          companies: allCompanies.length > 1 ? allCompanies : undefined,
+          recipient_email: rec.email,
+          gemini_api_keys: savedKeys.length > 0 ? savedKeys : undefined,
+          model: selectedModel,
+          result_id: rec.result_id,
+          result_ids: resultIds
+        });
+
+        setRecipients(prev => prev.map(r => r.id === rec.id ? {
+          ...r,
+          isAiGenerating: false,
+          ai_subject: aiResponse.subject,
+          ai_body: aiResponse.body,
+          ai_prompt: aiInstruction,
+          useAiDraft: true
+        } : r));
+
+        // Auto-switch preview box to the latest generated lead
+        setPreviewLeadId(rec.id);
+
+        successCount++;
+        addLog(`🟢 [AI ${i + 1}/${selected.length}] Generated personalized pitch for ${rec.domain}${allSites.length > 1 ? ` (${allSites.length} websites)` : ''} using key ${aiResponse.key_used}.`);
+      } catch (err: any) {
+        failCount++;
+        setRecipients(prev => prev.map(r => r.id === rec.id ? { ...r, isAiGenerating: false } : r));
+        addLog(`❌ [AI ${i + 1}/${selected.length}] Failed for ${rec.domain}: ${err.message}`);
+      }
+
+      // Short delay between generations to be polite
+      await new Promise(r => setTimeout(r, 400));
+    }
+
+    setIsBatchAiGenerating(false);
+    setAiProgressText('');
+    refreshKeyStatus();
+    addLog(`🎉 AI Generator completed! Successfully generated ${successCount} tailored emails (${failCount} failed).`);
+  };
+
+  // -------------------------------------------------------------
+  // AI Email Generator: Single Lead Regeneration
+  // -------------------------------------------------------------
+  const handleRegenerateSingleAiEmail = async () => {
+    if (!editingRecipient) return;
+    setIsSingleRegenerating(true);
+    try {
+      const allSites = editingRecipient.websites && editingRecipient.websites.length > 0
+        ? editingRecipient.websites.map(w => w.website_url)
+        : [editingRecipient.website_url];
+      const allCompanies = editingRecipient.websites && editingRecipient.websites.length > 0
+        ? editingRecipient.websites.map(w => w.company_name)
+        : [editingRecipient.company_name];
+      const resultIds = editingRecipient.result_ids && editingRecipient.result_ids.length > 0
+        ? editingRecipient.result_ids
+        : (editingRecipient.result_id ? [editingRecipient.result_id] : undefined);
+
+      const aiResponse = await generateAIEmail({
+        user_instruction: aiInstruction,
+        website_url: editingRecipient.website_url,
+        websites: allSites.length > 1 ? allSites : undefined,
+        company_name: editingRecipient.company_name,
+        companies: allCompanies.length > 1 ? allCompanies : undefined,
+        recipient_email: editingRecipient.email,
+        gemini_api_keys: savedKeys.length > 0 ? savedKeys : undefined,
+        model: selectedModel,
+        result_id: editingRecipient.result_id,
+        result_ids: resultIds
+      });
+
+      setEditAiSubject(aiResponse.subject);
+      setEditAiBody(aiResponse.body);
+
+      // Update in recipients list
+      setRecipients(prev => prev.map(r => r.id === editingRecipient.id ? {
+        ...r,
+        ai_subject: aiResponse.subject,
+        ai_body: aiResponse.body,
+        ai_prompt: aiInstruction,
+        useAiDraft: true
+      } : r));
+
+      setEditingRecipient(prev => prev ? {
+        ...prev,
+        ai_subject: aiResponse.subject,
+        ai_body: aiResponse.body,
+        useAiDraft: true
+      } : null);
+
+      addLog(`✨ Regenerated custom AI pitch for ${editingRecipient.domain}${allSites.length > 1 ? ` (${allSites.length} websites)` : ''} using key ${aiResponse.key_used}.`);
+      refreshKeyStatus();
+    } catch (err: any) {
+      alert(`AI generation error: ${err.message}`);
+    } finally {
+      setIsSingleRegenerating(false);
+    }
+  };
+
+  // Save manual edit of AI Draft
+  const handleSaveEditedDraft = async () => {
+    if (!editingRecipient) return;
+
+    setRecipients(prev => prev.map(r => r.id === editingRecipient.id ? {
+      ...r,
+      ai_subject: editAiSubject,
+      ai_body: editAiBody,
+      useAiDraft: true
+    } : r));
+
+    const targetIds = editingRecipient.result_ids && editingRecipient.result_ids.length > 0
+      ? editingRecipient.result_ids
+      : (editingRecipient.result_id ? [editingRecipient.result_id] : []);
+
+    if (targetIds.length > 0 && jobId) {
+      try {
+        await Promise.all(targetIds.map(rid => updateResultAIEmail(jobId, rid, editAiSubject, editAiBody)));
+      } catch (e) {
+        console.warn('Could not persist edited draft to DB:', e);
+      }
+    }
+
+    addLog(`Updated AI draft for ${editingRecipient.email}.`);
+    setEditingRecipient(null);
+  };
+
+  // Open modal for editing recipient
+  const handleOpenEditModal = (rec: CampaignRecipient) => {
+    setEditingRecipient(rec);
+    const allWebsites = rec.websites && rec.websites.length > 0 
+      ? rec.websites.map(w => w.website_url).join(' and ') 
+      : rec.website_url;
+    const allCompanies = rec.websites && rec.websites.length > 0 
+      ? rec.websites.map(w => w.company_name).filter(Boolean).join(' & ') 
+      : rec.company_name;
+
+    setEditAiSubject(rec.ai_subject || subject.replace(/{company_name}/g, allCompanies).replace(/{website}/g, allWebsites));
+    setEditAiBody(rec.ai_body || body.replace(/{company_name}/g, allCompanies).replace(/{website}/g, allWebsites));
   };
 
   // Campaign Dispatch Logic
@@ -249,22 +679,32 @@ export default function EmailCampaignPage() {
       prev.map((r) => (r.id === currentRec.id ? { ...r, status: 'sending' } : r))
     );
 
-    // Replace placeholders including {website} & {website_url}
-    const formattedSubject = subject
-      .replace(/{company_name}/g, currentRec.company_name)
-      .replace(/{domain}/g, currentRec.domain)
-      .replace(/{website}/g, currentRec.website_url)
-      .replace(/{website_url}/g, currentRec.website_url)
-      .replace(/{email}/g, currentRec.email);
+    // Check if recipient has a custom AI draft enabled
+    let formattedSubject: string;
+    let formattedBody: string;
 
-    const formattedBody = body
-      .replace(/{company_name}/g, currentRec.company_name)
-      .replace(/{domain}/g, currentRec.domain)
-      .replace(/{website}/g, currentRec.website_url)
-      .replace(/{website_url}/g, currentRec.website_url)
-      .replace(/{email}/g, currentRec.email);
+    if (currentRec.useAiDraft && currentRec.ai_subject && currentRec.ai_body) {
+      formattedSubject = currentRec.ai_subject;
+      formattedBody = currentRec.ai_body;
+      addLog(`✉️ [${index + 1}/${activeList.length}] Using AI-personalized pitch for ${currentRec.email} (${currentRec.domain})...`);
+    } else {
+      // Fallback template placeholders
+      formattedSubject = subject
+        .replace(/{company_name}/g, currentRec.company_name)
+        .replace(/{domain}/g, currentRec.domain)
+        .replace(/{website}/g, currentRec.website_url)
+        .replace(/{website_url}/g, currentRec.website_url)
+        .replace(/{email}/g, currentRec.email);
 
-    addLog(`✉️ [${index + 1}/${activeList.length}] Connecting to SMTP ${smtpHost}... Sending to ${currentRec.email} (${currentRec.website_url})...`);
+      formattedBody = body
+        .replace(/{company_name}/g, currentRec.company_name)
+        .replace(/{domain}/g, currentRec.domain)
+        .replace(/{website}/g, currentRec.website_url)
+        .replace(/{website_url}/g, currentRec.website_url)
+        .replace(/{email}/g, currentRec.email);
+    }
+
+    addLog(`✉️ [${index + 1}/${activeList.length}] Connecting to SMTP ${smtpHost}... Sending to ${currentRec.email}...`);
 
     try {
       await sendCampaignEmail({
@@ -326,6 +766,7 @@ export default function EmailCampaignPage() {
 
   const sentCount = recipients.filter((r) => r.status === 'sent').length;
   const failedCount = recipients.filter((r) => r.status === 'failed').length;
+  const aiReadyCount = recipients.filter((r) => r.ai_body && r.useAiDraft).length;
 
   if (isLoading) {
     return (
@@ -335,6 +776,8 @@ export default function EmailCampaignPage() {
       </div>
     );
   }
+
+  const activeKeysCount = geminiPoolStatus?.active_keys ?? (savedKeys.length > 0 ? savedKeys.length : 0);
 
   return (
     <div className="space-y-8 py-2">
@@ -357,12 +800,24 @@ export default function EmailCampaignPage() {
             </span>
           </div>
           <p className="text-xs text-gray-400">
-            Target Job: <span className="font-mono text-gray-300">{progress?.filename || jobId}</span>
+            Target Job: <span className="font-mono text-gray-300">{progress?.filename || jobId}</span> • {recipients.length} Leads
           </p>
         </div>
 
-        {/* Start / Pause Controller */}
+        {/* Start / Pause Controller & Gemini Key Manager Trigger */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowKeysModal(true)}
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all ${
+              activeKeysCount > 0
+                ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20 shadow-sm'
+                : 'bg-amber-500/10 border-amber-500/40 text-amber-300 hover:bg-amber-500/20 animate-pulse'
+            }`}
+          >
+            <Key className="w-3.5 h-3.5" />
+            <span>{activeKeysCount > 0 ? `${activeKeysCount} Gemini Keys Active (Rotator ON)` : 'Configure Gemini Keys'}</span>
+          </button>
+
           {isCampaignRunning ? (
             <button
               onClick={pauseCampaign}
@@ -393,24 +848,452 @@ export default function EmailCampaignPage() {
           </div>
         </div>
         <div>
-          <span className="text-xs font-medium text-gray-400">Emails Delivered via SMTP</span>
+          <span className="text-xs font-medium text-gray-400">AI Tailored Email Responses</span>
+          <div className="text-2xl font-extrabold text-purple-400 font-display mt-1 flex items-center gap-2">
+            <span>{aiReadyCount} Ready</span>
+            <Sparkles className="w-5 h-5 text-purple-400" />
+          </div>
+        </div>
+        <div>
+          <span className="text-xs font-medium text-gray-400">Delivered via SMTP</span>
           <div className="text-2xl font-extrabold text-emerald-400 font-display mt-1 flex items-center gap-2">
             <span>{sentCount}</span>
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           </div>
         </div>
         <div>
-          <span className="text-xs font-medium text-gray-400">Failed / Rejected</span>
-          <div className="text-2xl font-extrabold text-rose-400 font-display mt-1">
-            {failedCount}
-          </div>
-        </div>
-        <div>
           <span className="text-xs font-medium text-gray-400">Next Dispatch Timer</span>
           <div className="text-2xl font-extrabold text-cyan-400 font-mono mt-1 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-cyan-400 animate-spin" />
+            <Clock className="w-5 h-5 text-cyan-400" />
             <span>{isCampaignRunning ? `${countdownSeconds}s` : 'Idle'}</span>
           </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* FEATURE: GEMINI AI OUTREACH EMAIL GENERATOR WITH ROTATOR      */}
+      {/* ------------------------------------------------------------- */}
+      <div className="p-6 rounded-2xl glass-card border border-purple-500/40 space-y-5 shadow-2xl relative overflow-hidden bg-gradient-to-br from-purple-950/20 via-slate-900/60 to-cyan-950/20">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-white/10 pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-md">
+                <Sparkles className="w-4 h-4" />
+              </span>
+              <h3 className="text-base font-extrabold text-white font-display tracking-tight">
+                Gemini AI Personalized Email Generator
+              </h3>
+              <span className="px-2.5 py-0.5 text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 rounded-full font-mono">
+                Auto Key Rotator Enabled
+              </span>
+            </div>
+            <p className="text-xs text-gray-300 max-w-2xl">
+              Tell Gemini what to say to each website host (e.g. invite to host platform, pitch services, propose collaboration).
+              Gemini crafts a custom personalized email subject and body for each lead using resilient key failover.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowKeysModal(true)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:border-cyan-400/50 flex items-center gap-1.5 transition-all"
+            >
+              <Key className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Keys Rotator ({activeKeysCount})</span>
+            </button>
+            <button
+              onClick={handleGenerateAllAiEmails}
+              disabled={isBatchAiGenerating || selectedRecipients.length === 0}
+              className="px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 rounded-xl shadow-lg shadow-purple-500/25 flex items-center gap-2 transition-all transform hover:-translate-y-0.5 disabled:opacity-50"
+            >
+              {isBatchAiGenerating ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                  <span>{aiProgressText || 'Generating with Gemini Rotator...'}</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 fill-white" />
+                  <span>Generate AI Emails for Selected ({selectedRecipients.length})</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Gemini Model Selector Grid */}
+        <div className="space-y-1.5 pt-1">
+          <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider flex items-center justify-between">
+            <span>Select Gemini AI Model:</span>
+            <span className="text-purple-300 font-mono text-[10px]">Active Model: {selectedModel}</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {GEMINI_MODELS.map((m) => {
+              const isSelected = selectedModel === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setSelectedModel(m.id)}
+                  className={`p-2.5 rounded-xl border text-left transition-all relative overflow-hidden ${
+                    isSelected
+                      ? 'bg-purple-950/60 border-purple-500 shadow-md shadow-purple-500/20 ring-1 ring-purple-500/50'
+                      : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-gray-300'}`}>
+                      {m.name}
+                    </span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                      isSelected ? 'bg-purple-500 text-white' : 'bg-white/10 text-gray-400'
+                    }`}>
+                      {m.badge}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 leading-tight">
+                    {m.useCase}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Prompt Input & Quick Suggestion Chips */}
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <label className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>User Objective / AI Instruction:</span>
+            </label>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] text-gray-400 mr-1 font-medium">Quick Suggestions:</span>
+              <button
+                type="button"
+                onClick={() => applyPromptPreset('host')}
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all flex items-center gap-1"
+              >
+                🚀 Invite Host to Platform
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPromptPreset('partner')}
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/30 hover:bg-purple-500/20 transition-all flex items-center gap-1"
+              >
+                🤝 Partnership Pitch
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPromptPreset('audit')}
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all flex items-center gap-1"
+              >
+                🔍 Free Audit Outreach
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPromptPreset('pitch')}
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-blue-500/10 text-blue-300 border border-blue-500/30 hover:bg-blue-500/20 transition-all flex items-center gap-1"
+              >
+                💼 Custom Pitch
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            rows={3}
+            value={aiInstruction}
+            onChange={(e) => setAiInstruction(e.target.value)}
+            placeholder="e.g. visit all websites and invite that website host to host platform..."
+            className="w-full p-3.5 glass-input text-xs text-white rounded-xl font-sans leading-relaxed focus:border-purple-400"
+          />
+
+          {isBatchAiGenerating && (
+            <div className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-xs text-purple-200 flex items-center justify-between animate-pulse">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 text-purple-400 animate-spin" />
+                <span className="font-semibold">{aiProgressText}</span>
+              </div>
+              <span className="font-mono text-[11px] text-purple-300">Rotator actively balancing requests</span>
+            </div>
+          )}
+
+          {/* ------------------------------------------------------------- */}
+          {/* DEDICATED AI RESPONSE EMAIL BOX                               */}
+          {/* ------------------------------------------------------------- */}
+          {(() => {
+            const currentPreviewLead = recipients.find(r => r.id === previewLeadId) || (recipients.length > 0 ? recipients[0] : null);
+            const currentIdx = recipients.findIndex(r => r.id === (currentPreviewLead?.id || ''));
+            
+            const handlePrev = () => {
+              if (currentIdx > 0) setPreviewLeadId(recipients[currentIdx - 1].id);
+            };
+            const handleNext = () => {
+              if (currentIdx < recipients.length - 1) setPreviewLeadId(recipients[currentIdx + 1].id);
+            };
+
+            const handleGenerateForPreviewLead = async () => {
+              if (!currentPreviewLead) return;
+              setIsSingleRegenerating(true);
+              try {
+                const aiResponse = await generateAIEmail({
+                  user_instruction: aiInstruction,
+                  website_url: currentPreviewLead.website_url,
+                  company_name: currentPreviewLead.company_name,
+                  recipient_email: currentPreviewLead.email,
+                  gemini_api_keys: savedKeys.length > 0 ? savedKeys : undefined,
+                  model: selectedModel,
+                  result_id: currentPreviewLead.result_id
+                });
+
+                setRecipients(prev => prev.map(r => r.id === currentPreviewLead.id ? {
+                  ...r,
+                  ai_subject: aiResponse.subject,
+                  ai_body: aiResponse.body,
+                  ai_prompt: aiInstruction,
+                  useAiDraft: true
+                } : r));
+
+                addLog(`✨ Generated AI email response for ${currentPreviewLead.domain} using ${selectedModel} (Key: ${aiResponse.key_used}).`);
+                refreshKeyStatus();
+              } catch (err: any) {
+                alert(`AI Generation error: ${err.message}`);
+              } finally {
+                setIsSingleRegenerating(false);
+              }
+            };
+
+            return (
+              <div id="ai-response-box" className="mt-4 rounded-2xl border-2 border-purple-500/50 bg-[#060a14] shadow-2xl overflow-hidden space-y-0">
+                {/* Email Box Header Bar */}
+                <div className="p-4 sm:p-5 bg-gradient-to-r from-purple-950/70 via-slate-900 to-indigo-950/70 border-b border-purple-500/30 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-inner">
+                      <Mail className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-extrabold text-white font-display tracking-tight">
+                          AI Response Email Box
+                        </h4>
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                          Live Inspection Box
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-400">
+                        View, copy, or edit the AI email response generated by Gemini {selectedModel}.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Lead Navigator Selector */}
+                  {recipients.length > 0 && (
+                    <div className="flex items-center gap-2 self-start md:self-auto">
+                      <button
+                        type="button"
+                        onClick={handlePrev}
+                        disabled={currentIdx <= 0}
+                        className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        title="Previous Lead"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+
+                      <select
+                        value={previewLeadId || (recipients[0]?.id ?? '')}
+                        onChange={(e) => setPreviewLeadId(e.target.value)}
+                        className="px-3 py-1.5 rounded-lg bg-black/60 border border-purple-500/40 text-xs font-mono text-purple-200 focus:outline-none focus:border-purple-400 max-w-xs truncate"
+                      >
+                        {recipients.map((r, idx) => (
+                          <option key={r.id} value={r.id} className="bg-[#090d18] text-white">
+                            {idx + 1}. {r.company_name} ({r.email}) {r.ai_body ? '✨ AI Ready' : '— Template'}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={handleNext}
+                        disabled={currentIdx >= recipients.length - 1}
+                        className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        title="Next Lead"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Email Box Body */}
+                {currentPreviewLead ? (
+                  <div className="p-5 sm:p-6 space-y-4 font-sans bg-[#050811]/95">
+                    
+                    {/* Metadata Header Card */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs">
+                      <div>
+                        <span className="text-gray-400 block text-[10px] font-bold uppercase tracking-wider">Recipient To:</span>
+                        <span className="font-mono text-cyan-300 font-semibold">{currentPreviewLead.email}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[10px] font-bold uppercase tracking-wider">Target Website:</span>
+                        <a
+                          href={currentPreviewLead.website_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-purple-300 hover:underline truncate inline-flex items-center gap-1"
+                        >
+                          <span>{currentPreviewLead.website_url}</span>
+                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                        </a>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block text-[10px] font-bold uppercase tracking-wider">AI Model & Status:</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="font-mono text-[11px] text-white font-semibold">{selectedModel}</span>
+                          {currentPreviewLead.ai_body ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              Generated
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-500/20 text-gray-400 border border-gray-500/30">
+                              Template Fallback
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Subject Line Inside Box */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                          Email Subject Line:
+                        </span>
+                        {currentPreviewLead.ai_subject && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(currentPreviewLead.ai_subject || '', 'subject')}
+                            className="text-[11px] font-mono text-cyan-400 hover:text-white flex items-center gap-1 transition-colors"
+                          >
+                            {copiedField === 'subject' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedField === 'subject' ? 'Copied!' : 'Copy Subject'}</span>
+                          </button>
+                        )}
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/40 text-sm font-bold text-white shadow-inner font-sans">
+                        {currentPreviewLead.ai_subject || (
+                          <span className="text-gray-400 font-normal italic">
+                            {subject.replace(/{company_name}/g, currentPreviewLead.company_name)} (Using Campaign Fallback Template)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Email Message Content Inside Box */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                          Email Message Body:
+                        </span>
+                        {currentPreviewLead.ai_body && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(currentPreviewLead.ai_body || '', 'body')}
+                            className="text-[11px] font-mono text-cyan-400 hover:text-white flex items-center gap-1 transition-colors"
+                          >
+                            {copiedField === 'body' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            <span>{copiedField === 'body' ? 'Copied!' : 'Copy Body'}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {currentPreviewLead.ai_body ? (
+                        <div className="p-4 sm:p-5 rounded-xl bg-black/60 border border-white/10 text-xs text-gray-200 font-mono whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto shadow-inner border-l-4 border-l-purple-500">
+                          {currentPreviewLead.ai_body}
+                        </div>
+                      ) : (
+                        <div className="p-6 rounded-xl bg-white/[0.02] border border-dashed border-white/10 text-center space-y-3">
+                          <p className="text-xs text-gray-400">
+                            No AI response email generated for <span className="text-white font-semibold">{currentPreviewLead.company_name}</span> yet.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleGenerateForPreviewLead}
+                            disabled={isSingleRegenerating}
+                            className="px-4 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-md inline-flex items-center gap-2 transition-all disabled:opacity-50"
+                          >
+                            {isSingleRegenerating ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Generating with Gemini {selectedModel}...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Generate AI Response for {currentPreviewLead.domain}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Bar Inside Box */}
+                    {currentPreviewLead.ai_body && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/10">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const full = `Subject: ${currentPreviewLead.ai_subject}\n\n${currentPreviewLead.ai_body}`;
+                              handleCopyText(full, 'full');
+                            }}
+                            className="px-3.5 py-1.5 text-xs font-semibold text-gray-200 bg-white/5 border border-white/10 hover:border-white/20 rounded-lg flex items-center gap-1.5 transition-all"
+                          >
+                            {copiedField === 'full' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedField === 'full' ? 'Full Email Copied!' : 'Copy Full Email'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(currentPreviewLead)}
+                            className="px-3.5 py-1.5 text-xs font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 rounded-lg flex items-center gap-1.5 transition-all"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit in Modal</span>
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleGenerateForPreviewLead}
+                          disabled={isSingleRegenerating}
+                          className="px-3.5 py-1.5 text-xs font-semibold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-50"
+                        >
+                          {isSingleRegenerating ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Regenerating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Regenerate with Gemini {selectedModel}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-gray-400 space-y-2">
+                    <Mail className="w-8 h-8 text-gray-600 mx-auto" />
+                    <p className="text-xs">No email recipients loaded yet.</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -524,7 +1407,7 @@ export default function EmailCampaignPage() {
         </div>
       </div>
 
-      {/* Campaign Settings: Template & Time Interval */}
+      {/* Fallback Campaign Settings: Template & Time Interval */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Email Template Composer (2 cols) */}
@@ -532,7 +1415,7 @@ export default function EmailCampaignPage() {
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h3 className="text-sm font-bold text-white font-display flex items-center gap-2">
               <Mail className="w-4 h-4 text-cyan-400" />
-              <span>Email Content & Placeholders</span>
+              <span>Default Fallback Template (Used if AI Draft is not active)</span>
             </h3>
             <div className="flex items-center gap-1.5 text-[11px] text-gray-300 flex-wrap">
               <span className="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold">{`{website}`}</span>
@@ -556,7 +1439,7 @@ export default function EmailCampaignPage() {
             <div>
               <label className="block text-xs font-semibold text-gray-300 mb-1">Email Body Message:</label>
               <textarea
-                rows={7}
+                rows={5}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 className="w-full p-4 glass-input text-xs text-white rounded-xl font-mono"
@@ -611,9 +1494,9 @@ export default function EmailCampaignPage() {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs text-cyan-200 leading-relaxed">
-              <p className="font-semibold text-cyan-300 mb-1">⚡ Dynamic {`{website}`} Placeholder</p>
-              Auto-replaces <code className="text-cyan-300 font-bold">{`{website}`}</code> with the exact website URL (e.g. <span className="font-mono underline">https://stripe.com</span>) of each recipient!
+            <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/30 text-xs text-purple-200 leading-relaxed">
+              <p className="font-semibold text-purple-300 mb-1">✨ AI Outreach Priority</p>
+              When an AI email is generated for a lead, the dispatcher automatically sends their unique personalized AI pitch instead of the generic template!
             </div>
           </div>
         </div>
@@ -629,7 +1512,7 @@ export default function EmailCampaignPage() {
               <span>Extracted Primary Email Recipients ({recipients.length})</span>
             </h3>
             <p className="text-xs text-gray-400">
-              Edit recipient email addresses & website URLs directly inline, or add custom recipients below.
+              Each lead can have their own custom Gemini AI email response. Click &ldquo;View/Edit Pitch&rdquo; to customize before sending.
             </p>
           </div>
 
@@ -679,17 +1562,18 @@ export default function EmailCampaignPage() {
                     className="rounded bg-gray-900 border-gray-700 text-cyan-500 focus:ring-cyan-500/20"
                   />
                 </th>
-                <th className="py-3 px-3">Company Name</th>
-                <th className="py-3 px-3">Scraped Website URL ({`{website}`})</th>
-                <th className="py-3 px-3">Editable Primary Email Address ({`{email}`})</th>
+                <th className="py-3 px-3">Company / Domain</th>
+                <th className="py-3 px-3">Website URL</th>
+                <th className="py-3 px-3">Recipient Email</th>
+                <th className="py-3 px-3">AI Outreach Draft</th>
                 <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-3 text-right">Action</th>
+                <th className="py-3 px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-sans">
               {recipients.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-gray-400">
+                  <td colSpan={7} className="py-8 text-center text-gray-400">
                     No primary working email recipients extracted for this job yet.
                   </td>
                 </tr>
@@ -705,7 +1589,10 @@ export default function EmailCampaignPage() {
                       />
                     </td>
                     <td className="py-3 px-3 font-semibold text-white">
-                      {rec.company_name}
+                      <div className="space-y-0.5">
+                        <span className="block">{rec.company_name}</span>
+                        <span className="text-[10px] text-gray-400 font-mono">{rec.domain}</span>
+                      </div>
                     </td>
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-1.5">
@@ -714,7 +1601,7 @@ export default function EmailCampaignPage() {
                           type="text"
                           value={rec.website_url}
                           onChange={(e) => handleUpdateWebsite(rec.id, e.target.value)}
-                          className="w-52 px-2.5 py-1 glass-input text-xs font-mono text-cyan-300 rounded-lg focus:border-cyan-500"
+                          className="w-48 px-2 py-1 glass-input text-xs font-mono text-cyan-300 rounded-lg focus:border-cyan-500"
                         />
                         <a
                           href={rec.website_url}
@@ -733,9 +1620,45 @@ export default function EmailCampaignPage() {
                           type="email"
                           value={rec.email}
                           onChange={(e) => handleUpdateEmail(rec.id, e.target.value)}
-                          className="w-full px-2.5 py-1 glass-input text-xs font-mono text-purple-200 rounded-lg focus:border-purple-500"
+                          className="w-full px-2 py-1 glass-input text-xs font-mono text-purple-200 rounded-lg focus:border-purple-500"
                         />
                       </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      {rec.isAiGenerating ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-300 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-500/30 animate-pulse">
+                          <RefreshCw className="w-3 h-3 animate-spin" /> Generating...
+                        </span>
+                      ) : rec.ai_body ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setPreviewLeadId(rec.id);
+                              const el = document.getElementById('ai-response-box');
+                              if (el) el.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 px-2.5 py-1 rounded-lg border border-purple-500/40 transition-all shadow-sm"
+                            title="Inspect in AI Response Email Box"
+                          >
+                            <Sparkles className="w-3 h-3 text-purple-400" />
+                            <span>View in Box</span>
+                            <Eye className="w-3 h-3 ml-0.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setPreviewLeadId(rec.id);
+                            const el = document.getElementById('ai-response-box');
+                            if (el) el.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          className="text-[11px] text-gray-400 hover:text-purple-300 transition-colors flex items-center gap-1 font-mono"
+                          title="Open this lead in AI Response Email Box"
+                        >
+                          <span>Template</span>
+                          <Edit3 className="w-3 h-3 text-gray-500" />
+                        </button>
+                      )}
                     </td>
                     <td className="py-3 px-3">
                       {rec.status === 'sent' && (
@@ -758,13 +1681,22 @@ export default function EmailCampaignPage() {
                       )}
                     </td>
                     <td className="py-3 px-3 text-right">
-                      <button
-                        onClick={() => handleDeleteRecipient(rec.id)}
-                        className="p-1.5 text-gray-400 hover:text-rose-400 transition-colors"
-                        title="Remove recipient"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleOpenEditModal(rec)}
+                          className="p-1.5 text-gray-400 hover:text-purple-300 transition-colors"
+                          title="View / Edit Custom Email"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRecipient(rec.id)}
+                          className="p-1.5 text-gray-400 hover:text-rose-400 transition-colors"
+                          title="Remove recipient"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -779,14 +1711,14 @@ export default function EmailCampaignPage() {
         <div className="flex items-center justify-between border-b border-white/10 pb-2">
           <span className="font-bold text-cyan-400 flex items-center gap-2">
             <FileText className="w-4 h-4 text-cyan-400" />
-            <span>Live Dispatcher Campaign Logs</span>
+            <span>Live Dispatcher & AI Rotator Activity Logs</span>
           </span>
           <span className="text-[10px] text-gray-500">Auto-scrolling stream</span>
         </div>
 
         <div className="h-44 overflow-y-auto space-y-1.5 text-gray-300 pr-2">
           {logs.length === 0 ? (
-            <p className="text-gray-500 italic">Ready to start email campaign dispatch...</p>
+            <p className="text-gray-500 italic">Ready to start email campaign dispatch or AI generation...</p>
           ) : (
             logs.map((log, i) => (
               <div key={i} className="leading-relaxed">
@@ -797,6 +1729,117 @@ export default function EmailCampaignPage() {
           <div ref={logsEndRef} />
         </div>
       </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* ------------------------------------------------------------- */}
+      {/* MODAL 1: GEMINI KEY ROTATOR & 429 QUOTA HEALTH INSPECTOR      */}
+      {/* ------------------------------------------------------------- */}
+      <GeminiKeyManagerModal
+        isOpen={showKeysModal}
+        onClose={() => setShowKeysModal(false)}
+        initialModel={selectedModel}
+        onKeysChanged={(updatedKeys) => {
+          setSavedKeys(updatedKeys);
+          refreshKeyStatus();
+        }}
+      />
+
+      {/* ------------------------------------------------------------- */}
+      {/* MODAL 2: RECIPIENT AI DRAFT VIEW & EDIT MODAL                 */}
+      {/* ------------------------------------------------------------- */}
+      {editingRecipient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-2xl bg-[#090d18] border border-purple-500/40 rounded-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                  <Sparkles className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-white font-display">
+                    Tailored AI Email Draft for {editingRecipient.company_name}
+                  </h3>
+                  <p className="text-xs text-cyan-300 font-mono">
+                    {editingRecipient.website_url} • {editingRecipient.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingRecipient(null)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Subject Input */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-gray-300">
+                Email Subject Line:
+              </label>
+              <input
+                type="text"
+                value={editAiSubject}
+                onChange={(e) => setEditAiSubject(e.target.value)}
+                className="w-full px-3.5 py-2 glass-input text-xs text-white rounded-xl font-sans focus:border-purple-400"
+              />
+            </div>
+
+            {/* Body Input */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-gray-300">
+                Personalized Email Body:
+              </label>
+              <textarea
+                rows={9}
+                value={editAiBody}
+                onChange={(e) => setEditAiBody(e.target.value)}
+                className="w-full p-4 glass-input text-xs text-white rounded-xl font-mono leading-relaxed focus:border-purple-400"
+              />
+            </div>
+
+            {/* Footer with Regenerate & Save */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={handleRegenerateSingleAiEmail}
+                disabled={isSingleRegenerating}
+                className="px-4 py-2 text-xs font-semibold text-purple-300 bg-purple-950/40 border border-purple-500/30 hover:bg-purple-500/20 rounded-xl flex items-center gap-2 transition-all disabled:opacity-50"
+              >
+                {isSingleRegenerating ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Regenerating with Gemini Rotator...</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Regenerate with AI</span>
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingRecipient(null)}
+                  className="px-4 py-2 text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditedDraft}
+                  className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-lg transition-all flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save Draft</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

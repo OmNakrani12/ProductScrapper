@@ -204,5 +204,32 @@ WebContact AI enforces safety checks on every URL before sending network request
 - Restricted hostname blocking (`localhost`, `metadata.google.internal`).
 - Request timeout limits (default: 15s) and maximum concurrent site limits.
 
-run this command in backend folder to run the server
+---
+
+## 🤖 Gemini AI Outreach & Key Rotator
+
+Generate hyper-personalized AI email pitches (e.g., *"visit all websites and invite that website host to host platform"*) for every scraped lead with automatic API key rotation and failover.
+
+### Supported Gemini Models:
+
+| Model | Best Use |
+| :--- | :--- |
+| **`gemini-3.8-flash`** *(Default)* | Coding, chatbots, reasoning, and AI agents |
+| **`gemini-3.6-flash`** | General-purpose tasks and multimodal applications |
+| **`gemini-3.5-flash-lite`** | Fast, cost-efficient, high-volume requests |
+| **`gemini-4-argon`** | Complex coding, mathematics, and advanced reasoning |
+
+### Environment Variables:
+```env
+# Comma-separated keys for auto-failover & rate-limit rotation:
+GEMINI_API_KEYS=your_first_gemini_key,your_second_gemini_key
+GEMINI_MODEL=gemini-3.8-flash
+```
+
+---
+
+Run this command in the `backend` folder to start the server:
+```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+

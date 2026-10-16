@@ -41,3 +41,37 @@ def test_direct_job_creation(mock_process_job):
     # Clean up job
     del_res = client.delete(f"/api/jobs/{job_id}")
     assert del_res.status_code == 200
+
+def test_ai_keys_status_endpoint():
+    res = client.get("/api/ai/keys/status")
+    assert res.status_code == 200
+    data = res.json()
+    assert "total_keys" in data
+    assert "active_keys" in data
+    assert "keys" in data
+
+@patch("app.api.ai.generate_ai_email", new_callable=AsyncMock)
+def test_ai_generate_email_endpoint(mock_gen):
+    mock_gen.return_value = {
+        "subject": "Invite: Join our Platform",
+        "body": "Hello, we would love to invite you to host with us.",
+        "key_used": "AIzaSy...7X9q",
+        "model_used": "gemini-1.5-flash",
+        "attempts": 1,
+        "website_url": "https://example.com",
+        "recipient_email": "admin@example.com"
+    }
+
+    payload = {
+        "user_instruction": "visit all websites and invite that website host to host platform",
+        "website_url": "https://example.com",
+        "company_name": "Example Corp",
+        "recipient_email": "admin@example.com"
+    }
+    res = client.post("/api/ai/generate-email", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["subject"] == "Invite: Join our Platform"
+    assert "invite you to host with us" in data["body"]
+

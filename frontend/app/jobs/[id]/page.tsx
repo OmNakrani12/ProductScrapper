@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertCircle, Sparkles, Mail } from 'lucide-react';
 import { getJobProgress, getJobResults } from '@/lib/api';
 import { JobProgress, WebsiteResult } from '@/types';
 import ProgressBar from '@/components/ProgressBar';
@@ -34,6 +34,14 @@ export default function JobDetailPage() {
   const [selectedResult, setSelectedResult] = useState<WebsiteResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync updated result across state
+  const handleResultUpdated = (updated: WebsiteResult) => {
+    setResults((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    if (selectedResult && selectedResult.id === updated.id) {
+      setSelectedResult(updated);
+    }
+  };
 
   // Fetch progress stats
   const fetchProgress = useCallback(async (isInitial = false) => {
@@ -214,8 +222,17 @@ export default function JobDetailPage() {
           </p>
         </div>
 
-        {/* Export Buttons */}
-        <ExportButtons jobId={progress.job_id} />
+        {/* Action Buttons: AI Campaign & Export */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => router.push(`/jobs/${jobId}/campaign`)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-purple-500/20 flex items-center gap-2 transition-all group"
+          >
+            <Sparkles className="w-4 h-4 text-purple-200 group-hover:rotate-12 transition-transform" />
+            <span>AI Campaign & Live Box</span>
+          </button>
+          <ExportButtons jobId={progress.job_id} />
+        </div>
       </div>
 
       {/* Live Progress Bar */}
@@ -224,7 +241,7 @@ export default function JobDetailPage() {
       {/* Summary Stats Grid */}
       <DashboardStats stats={progress} />
 
-      {/* Main Results Table */}
+      {/* Main Results Table with Expandable AI Response Email Box */}
       <div className="pt-2">
         <ResultsTable
           results={results}
@@ -233,6 +250,7 @@ export default function JobDetailPage() {
           pageSize={25}
           searchQuery={searchQuery}
           statusFilter={statusFilter}
+          jobId={jobId}
           hasPersonalEmail={hasPersonalEmail}
           hasBusinessEmail={hasBusinessEmail}
           hasPrimaryEmail={hasPrimaryEmail}
@@ -245,13 +263,16 @@ export default function JobDetailPage() {
           onCheckboxFilterChange={handleCheckboxFilterChange}
           onClearAllFilters={handleClearAllFilters}
           onSelectRow={(row) => setSelectedResult(row)}
+          onResultUpdated={handleResultUpdated}
         />
       </div>
 
-      {/* Detail Drawer */}
+      {/* Detail Drawer with AI Response Email Box */}
       <ResultDetails
         result={selectedResult}
+        jobId={jobId}
         onClose={() => setSelectedResult(null)}
+        onUpdated={handleResultUpdated}
       />
     </div>
   );

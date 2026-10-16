@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { Search, ExternalLink, Mail, ChevronRight, UserCheck, Info, Share2, CheckCircle2, Filter, Star, Copy, Check, Sparkles } from 'lucide-react';
+import { useState, Fragment } from 'react';
+import { Search, ExternalLink, Mail, ChevronRight, UserCheck, Info, Share2, CheckCircle2, Filter, Star, Copy, Check, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { WebsiteResult } from '@/types';
 import StatusBadge from './StatusBadge';
 import Pagination from './Pagination';
+import AIEmailBox from './AIEmailBox';
 
 interface ResultsTableProps {
   results: WebsiteResult[];
@@ -11,6 +12,7 @@ interface ResultsTableProps {
   pageSize: number;
   searchQuery: string;
   statusFilter: string;
+  jobId?: string;
   hasPersonalEmail?: boolean;
   hasBusinessEmail?: boolean;
   hasPrimaryEmail?: boolean;
@@ -23,6 +25,7 @@ interface ResultsTableProps {
   onCheckboxFilterChange?: (filterKey: string, checked: boolean) => void;
   onClearAllFilters?: () => void;
   onSelectRow: (result: WebsiteResult) => void;
+  onResultUpdated?: (updated: WebsiteResult) => void;
 }
 
 export default function ResultsTable({
@@ -32,6 +35,7 @@ export default function ResultsTable({
   pageSize,
   searchQuery,
   statusFilter,
+  jobId,
   hasPersonalEmail = false,
   hasBusinessEmail = false,
   hasPrimaryEmail = false,
@@ -44,8 +48,10 @@ export default function ResultsTable({
   onCheckboxFilterChange,
   onClearAllFilters,
   onSelectRow,
+  onResultUpdated,
 }: ResultsTableProps) {
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [expandedAiRowId, setExpandedAiRowId] = useState<string | null>(null);
 
   const handleCopyEmail = (email: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -181,108 +187,190 @@ export default function ResultsTable({
                 const primaryMail = row.primary_email;
                 const personalMails = row.personal_emails || [];
                 const businessMails = row.business_emails || [];
+                const isAiBoxExpanded = expandedAiRowId === row.id;
 
                 return (
-                  <tr
-                    key={row.id}
-                    onClick={() => onSelectRow(row)}
-                    className="hover:bg-white/[0.04] transition-colors cursor-pointer group"
-                  >
-                    {/* Domain & Company Name */}
-                    <td className="py-4 px-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm font-display group-hover:text-cyan-300 transition-colors">
-                            {row.website_url.replace(/^https?:\/\//i, '').split('/')[0] || row.website_url}
-                          </span>
-                          <a
-                            href={row.website_url.startsWith('http') ? row.website_url : `https://${row.website_url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-gray-500 hover:text-cyan-400 transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
+                  <Fragment key={row.id}>
+                    <tr
+                      onClick={() => onSelectRow(row)}
+                      className={`hover:bg-white/[0.04] transition-colors cursor-pointer group ${
+                        isAiBoxExpanded ? 'bg-purple-950/20 border-l-2 border-l-purple-500' : ''
+                      }`}
+                    >
+                      {/* Domain & Company Name */}
+                      <td className="py-4 px-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white text-sm font-display group-hover:text-cyan-300 transition-colors">
+                              {row.website_url.replace(/^https?:\/\//i, '').split('/')[0] || row.website_url}
+                            </span>
+                            <a
+                              href={row.website_url.startsWith('http') ? row.website_url : `https://${row.website_url}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-gray-500 hover:text-cyan-400 transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                          {row.company_name && (
+                            <p className="text-[11px] text-gray-400 line-clamp-1 max-w-xs">{row.company_name}</p>
+                          )}
                         </div>
-                        {row.company_name && (
-                          <p className="text-[11px] text-gray-400 line-clamp-1 max-w-xs">{row.company_name}</p>
-                        )}
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Status Badge */}
-                    <td className="py-4 px-4">
-                      <StatusBadge status={row.status} />
-                    </td>
+                      {/* Status Badge */}
+                      <td className="py-4 px-4">
+                        <StatusBadge status={row.status} />
+                      </td>
 
-                    {/* Primary Email */}
-                    <td className="py-4 px-4">
-                      {primaryMail ? (
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-950/50 border border-cyan-500/30 text-cyan-200 text-xs font-mono font-medium shadow-sm group/btn">
-                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />
-                          <span className="font-bold">{primaryMail}</span>
-                          <button
-                            onClick={(e) => handleCopyEmail(primaryMail, e)}
-                            className="ml-1 text-cyan-400 hover:text-white transition-colors"
-                            title="Copy email to clipboard"
-                          >
-                            {copiedEmail === primaryMail ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      {/* Primary Email & AI Box Trigger */}
+                      <td className="py-4 px-4">
+                        {primaryMail ? (
+                          <div className="space-y-1.5">
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-950/50 border border-cyan-500/30 text-cyan-200 text-xs font-mono font-medium shadow-sm group/btn">
+                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />
+                              <span className="font-bold">{primaryMail}</span>
+                              <button
+                                onClick={(e) => handleCopyEmail(primaryMail, e)}
+                                className="ml-1 text-cyan-400 hover:text-white transition-colors"
+                                title="Copy email to clipboard"
+                              >
+                                {copiedEmail === primaryMail ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+
+                            {/* View AI Response inside box trigger */}
+                            {row.ai_email_body ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedAiRowId(isAiBoxExpanded ? null : row.id);
+                                }}
+                                className="flex items-center gap-1.5 text-[10px] text-purple-300 font-medium hover:text-white transition-colors group/ai"
+                                title="Click to view AI Response Email inside box"
+                              >
+                                <span className="p-0.5 rounded bg-purple-500/30 text-purple-300">
+                                  <Sparkles className="w-3 h-3 text-purple-300" />
+                                </span>
+                                <span className="font-semibold underline underline-offset-2">View in AI Box</span>
+                                <span className="text-gray-400 truncate max-w-[120px]">
+                                  • {row.ai_email_subject || 'Ready'}
+                                </span>
+                              </button>
                             ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-gray-500 text-xs font-mono">—</span>
-                      )}
-                    </td>
-
-                    {/* Personal Mails */}
-                    <td className="py-4 px-4 hidden md:table-cell">
-                      <div className="space-y-1">
-                        {personalMails.length > 0 ? (
-                          <div className="flex items-center gap-1.5 text-xs text-purple-300 font-mono">
-                            <UserCheck className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-                            <span className="truncate max-w-[180px]">{personalMails[0]}</span>
-                            {personalMails.length > 1 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">
-                                +{personalMails.length - 1}
-                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedAiRowId(isAiBoxExpanded ? null : row.id);
+                                }}
+                                className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-purple-300 transition-colors"
+                                title="Open AI Response Email Box"
+                              >
+                                <Sparkles className="w-3 h-3 text-purple-400/70" />
+                                <span>Generate AI Box</span>
+                              </button>
                             )}
                           </div>
                         ) : (
                           <span className="text-gray-500 text-xs font-mono">—</span>
                         )}
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Social Links */}
-                    <td className="py-4 px-4 hidden lg:table-cell">
-                      {row.social_links && Object.keys(row.social_links).length > 0 ? (
-                        <div className="flex items-center gap-1.5">
-                          {Object.keys(row.social_links).map((platform) => (
-                            <span
-                              key={platform}
-                              className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-gray-300 capitalize font-medium"
-                            >
-                              {platform}
-                            </span>
-                          ))}
+                      {/* Personal Mails */}
+                      <td className="py-4 px-4 hidden md:table-cell">
+                        <div className="space-y-1">
+                          {personalMails.length > 0 ? (
+                            <div className="flex items-center gap-1.5 text-xs text-purple-300 font-mono">
+                              <UserCheck className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                              <span className="truncate max-w-[180px]">{personalMails[0]}</span>
+                              {personalMails.length > 1 && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">
+                                  +{personalMails.length - 1}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500 text-xs font-mono">—</span>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-gray-500 text-xs">—</span>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* Action Arrow */}
-                    <td className="py-4 px-4 text-right">
-                      <button className="p-2 rounded-xl bg-white/5 group-hover:bg-cyan-500/20 text-gray-400 group-hover:text-cyan-300 transition-all">
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
+                      {/* Social Links */}
+                      <td className="py-4 px-4 hidden lg:table-cell">
+                        {row.social_links && Object.keys(row.social_links).length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            {Object.keys(row.social_links).map((platform) => (
+                              <span
+                                key={platform}
+                                className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] text-gray-300 capitalize font-medium"
+                              >
+                                {platform}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* Actions: AI Box Toggle + Drawer chevron */}
+                      <td className="py-4 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedAiRowId(isAiBoxExpanded ? null : row.id);
+                            }}
+                            className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                              isAiBoxExpanded
+                                ? 'bg-purple-600 text-white border-purple-400 shadow-lg shadow-purple-500/30'
+                                : row.ai_email_body
+                                ? 'bg-purple-950/60 border-purple-500/40 text-purple-300 hover:text-white hover:border-purple-400'
+                                : 'bg-white/5 border-white/10 text-gray-400 hover:text-purple-300 hover:bg-white/10'
+                            }`}
+                            title="Open AI Response Email Box"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">AI Box</span>
+                            {isAiBoxExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          </button>
+
+                          <button 
+                            type="button"
+                            className="p-2 rounded-xl bg-white/5 group-hover:bg-cyan-500/20 text-gray-400 group-hover:text-cyan-300 transition-all"
+                            title="View all website details"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* EXPANDABLE AI RESPONSE EMAIL BOX */}
+                    {isAiBoxExpanded && (
+                      <tr key={`${row.id}-expanded-box`} className="bg-[#050812]/90 border-b border-purple-500/30">
+                        <td colSpan={6} className="p-3 sm:p-5">
+                          <AIEmailBox
+                            result={row}
+                            jobId={jobId}
+                            onClose={() => setExpandedAiRowId(null)}
+                            onUpdated={(updated) => {
+                              if (onResultUpdated) onResultUpdated(updated);
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 );
               })
             )}

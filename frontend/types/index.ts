@@ -38,7 +38,41 @@ export interface WebsiteResult {
   duration_seconds: number;
   status: ResultStatus;
   error_message: string | null;
+  ai_email_subject?: string | null;
+  ai_email_body?: string | null;
+  ai_email_prompt?: string | null;
+  ai_email_generated_at?: string | null;
   created_at?: string | null;
+}
+
+export interface GeminiKeyStatus {
+  masked_key: string;
+  status: 'active' | 'cooldown' | 'invalid';
+  requests_count: number;
+  success_count: number;
+  error_count: number;
+  last_error?: string | null;
+  last_used_at?: number | null;
+  cooldown_remaining_sec?: number;
+}
+
+export interface GeminiPoolStatus {
+  total_keys: number;
+  active_keys: number;
+  cooldown_keys: number;
+  invalid_keys: number;
+  keys: GeminiKeyStatus[];
+}
+
+export interface GenerateAIEmailResponse {
+  status: string;
+  subject: string;
+  body: string;
+  key_used: string;
+  model_used: string;
+  attempts: number;
+  website_url: string;
+  recipient_email?: string;
 }
 
 export interface JobProgress {

@@ -188,6 +188,10 @@ def get_job_results(
             "duration_seconds": item.duration_seconds,
             "status": item.status,
             "error_message": item.error_message,
+            "ai_email_subject": getattr(item, "ai_email_subject", None),
+            "ai_email_body": getattr(item, "ai_email_body", None),
+            "ai_email_prompt": getattr(item, "ai_email_prompt", None),
+            "ai_email_generated_at": item.ai_email_generated_at.isoformat() if getattr(item, "ai_email_generated_at", None) else None,
             "created_at": item.created_at.isoformat() if item.created_at else None
         })
 

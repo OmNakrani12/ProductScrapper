@@ -33,6 +33,11 @@ try:
         SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
         SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "ReachBot Outreach")
 
+        # Google Gemini AI & Key Rotator
+        GEMINI_API_KEYS: str = os.getenv("GEMINI_API_KEYS", "")
+        GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+        GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+
         model_config = {
             "case_sensitive": True,
             "env_file": ".env",
@@ -69,5 +74,10 @@ except Exception:
         SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
         SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
         SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "ReachBot Outreach")
+
+        # Google Gemini AI & Key Rotator
+        GEMINI_API_KEYS: str = os.getenv("GEMINI_API_KEYS", "")
+        GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+        GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 settings = Settings()

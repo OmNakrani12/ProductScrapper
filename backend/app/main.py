@@ -9,6 +9,7 @@ from app.api.jobs import router as jobs_router
 from app.api.results import router as results_router
 from app.api.export import router as export_router
 from app.api.directory import router as directory_router
+from app.api.ai import router as ai_router
 
 # Configure logging
 logging.basicConfig(
@@ -23,9 +24,17 @@ def init_db():
         inspector = inspect(engine)
         if "website_results" in inspector.get_table_names():
             columns = [c["name"] for c in inspector.get_columns("website_results")]
-            if "social_links" not in columns:
-                with engine.begin() as conn:
+            with engine.begin() as conn:
+                if "social_links" not in columns:
                     conn.execute(text("ALTER TABLE website_results ADD COLUMN social_links TEXT DEFAULT '{}'"))
+                if "ai_email_subject" not in columns:
+                    conn.execute(text("ALTER TABLE website_results ADD COLUMN ai_email_subject VARCHAR(500)"))
+                if "ai_email_body" not in columns:
+                    conn.execute(text("ALTER TABLE website_results ADD COLUMN ai_email_body TEXT"))
+                if "ai_email_generated_at" not in columns:
+                    conn.execute(text("ALTER TABLE website_results ADD COLUMN ai_email_generated_at TIMESTAMP"))
+                if "ai_email_prompt" not in columns:
+                    conn.execute(text("ALTER TABLE website_results ADD COLUMN ai_email_prompt TEXT"))
     except Exception as e:
         logging.warning(f"Auto-migration error: {e}")
 
@@ -59,6 +68,7 @@ app.include_router(jobs_router, prefix=settings.API_V1_STR)
 app.include_router(results_router, prefix=settings.API_V1_STR)
 app.include_router(export_router, prefix=settings.API_V1_STR)
 app.include_router(directory_router, prefix=settings.API_V1_STR)
+app.include_router(ai_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root_status():

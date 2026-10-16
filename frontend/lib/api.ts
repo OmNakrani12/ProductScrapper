@@ -160,3 +160,104 @@ export async function scrapeDiscoveredProducts(urls: string[], filename: string 
     body: JSON.stringify({ urls, filename }),
   });
 }
+
+// -------------------------------------------------------------
+// Gemini AI Email Generator & Key Rotator API Methods
+// -------------------------------------------------------------
+
+export async function generateAIEmail(payload: {
+  user_instruction: string;
+  website_url?: string;
+  websites?: string[];
+  company_name?: string | null;
+  companies?: string[];
+  recipient_email?: string | null;
+  lead_context?: any;
+  gemini_api_keys?: string[];
+  model?: string;
+  result_id?: string;
+  result_ids?: string[];
+}): Promise<any> {
+  return handleFetch(`${API_BASE}/ai/generate-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function batchGenerateJobAIEmails(
+  jobId: string,
+  payload: {
+    user_instruction: string;
+    result_ids?: string[];
+    overwrite_existing?: boolean;
+    gemini_api_keys?: string[];
+    model?: string;
+  }
+): Promise<any> {
+  return handleFetch(`${API_BASE}/ai/jobs/${jobId}/batch-generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getGeminiKeysStatus(): Promise<any> {
+  return handleFetch(`${API_BASE}/ai/keys/status`, {
+    cache: 'no-store'
+  });
+}
+
+export async function addGeminiKeys(keys: string[]): Promise<any> {
+  return handleFetch(`${API_BASE}/ai/keys/add`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keys }),
+  });
+}
+
+export async function testGeminiKey(key: string, model: string = 'gemini-3.8-flash'): Promise<any> {
+  return handleFetch(`${API_BASE}/ai/keys/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, model }),
+  });
+}
+
+export async function testAllGeminiKeys(keys?: string[], model: string = 'gemini-3.8-flash'): Promise<any> {
+  return handleFetch(`${API_BASE}/ai/keys/test-all`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keys, model }),
+  });
+}
+
+export async function resetGeminiKeyCooldown(key?: string): Promise<any> {
+  return handleFetch(`${API_BASE}/ai/keys/reset-cooldown`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key }),
+  });
+}
+
+export async function removeGeminiKey(key: string): Promise<any> {
+  return handleFetch(`${API_BASE}/ai/keys/remove`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key }),
+  });
+}
+
+export async function updateResultAIEmail(
+  jobId: string,
+  resultId: string,
+  subject: string,
+  body: string
+): Promise<any> {
+  return handleFetch(`${API_BASE}/ai/jobs/${jobId}/results/${resultId}/ai-email`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, body }),
+  });
+}
+
