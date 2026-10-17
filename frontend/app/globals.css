@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Inter:ital,wght@0,300..700;1,300..700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #050811;
-  --foreground: #f3f4f6;
+  --background: #121316;
+  --foreground: #f1f3f4;
   --font-display: 'Plus Jakarta Sans', sans-serif;
   --font-sans: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -28,102 +28,167 @@ code, pre, .font-mono {
   font-family: var(--font-mono);
 }
 
-/* Industrial Grid & Blueprint Background */
-.bg-industrial-grid {
-  background-size: 40px 40px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+/* Firebase Console Matte Surfaces */
+.firebase-card {
+  background: #1e1f23;
+  border: 1px solid #2e3036;
+  border-radius: 0.75rem;
 }
 
-.bg-[#050811] {
-  background-color: #050811;
+.firebase-card-hover {
+  transition: all 0.15s ease-in-out;
 }
 
-/* Glassmorphism Design Utilities */
+.firebase-card-hover:hover {
+  border-color: #3b3e47;
+  background: #25272e;
+}
+
+.firebase-input {
+  background: #141518;
+  border: 1px solid #2e3036;
+  color: #f1f3f4;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.firebase-input:focus {
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.25);
+}
+
+/* Firebase Primary Blue Buttons */
+.firebase-btn-primary {
+  background: #1a73e8;
+  color: #ffffff;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.firebase-btn-primary:hover {
+  background: #1557b0;
+}
+
+.firebase-btn-secondary {
+  background: #25272e;
+  color: #e8eaed;
+  border: 1px solid #2e3036;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.firebase-btn-secondary:hover {
+  background: #2e3036;
+  color: #ffffff;
+}
+
+/* Backwards-compatible glass-input and card for existing components */
 .glass-card {
-  background: rgba(10, 15, 29, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-}
-
-.glass-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #1e1f23;
+  border: 1px solid #2e3036;
+  border-radius: 0.75rem;
 }
 
 .glass-card-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(6, 182, 212, 0.4);
-  box-shadow: 0 20px 40px -15px rgba(6, 182, 212, 0.25);
+  border-color: #3b3e47;
 }
 
 .glass-input {
-  background: rgba(6, 10, 20, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
+  background: #141518;
+  border: 1px solid #2e3036;
+  color: #f1f3f4;
 }
 
 .glass-input:focus {
-  border-color: rgba(6, 182, 212, 0.6);
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.25);
+  outline: none;
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.25);
 }
 
-/* Metallic & Gradient Text */
+.glow-button {
+  background: #1a73e8;
+  transition: all 0.15s ease;
+}
+
+.glow-button:hover {
+  background: #1557b0;
+}
+
+/* Subtle Gradient Text */
 .gradient-text {
-  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .gradient-text-industrial {
-  background: linear-gradient(135deg, #ffffff 0%, #94a3b8 50%, #38bdf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.gradient-text-amber {
-  background: linear-gradient(135deg, #fbbf24 0%, #f97316 50%, #ef4444 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #60a5fa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .gradient-text-emerald {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #06b6d4 100%);
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Industrial Neon Button */
-.glow-button {
-  background: linear-gradient(135deg, #06b6d4 0%, #2563eb 100%);
-  box-shadow: 0 0 25px rgba(6, 182, 212, 0.35);
-  transition: all 0.3s ease;
-}
-
-.glow-button:hover {
-  background: linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%);
-  box-shadow: 0 0 35px rgba(6, 182, 212, 0.6);
-  transform: translateY(-1px);
+.gradient-text-amber {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #050811;
+  background: #121316;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 6px;
-  border: 2px solid #050811;
+  background: #2e3036;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #3b3e47;
 }
+
+/* Mobile & Tablet Responsive Optimizations */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+    position: relative;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Touch Friendly Utilities */
+.touch-target {
+  min-height: 40px;
+  min-width: 40px;
+}
+
+/* Smooth Touch Scrolling Container */
+.smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Mobile Responsive Card Utilities */
+.mobile-card {
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.mobile-card:active {
+  transform: scale(0.99);
+}
+

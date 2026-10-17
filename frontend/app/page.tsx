@@ -1,7 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Sparkles, CheckCircle2, Zap, Target, ShieldCheck, ArrowRight, Cpu, Layers, Activity, Database, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { 
+  Zap, 
+  History, 
+  TrendingUp, 
+  MoreVertical,
+  Code2,
+  Bot
+} from 'lucide-react';
 import FileUploader from '@/components/FileUploader';
 
 export default function LandingPage() {
@@ -12,124 +20,133 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="space-y-12 sm:space-y-16 py-2 sm:py-6 relative">
+    <div className="space-y-3 max-w-6xl mx-auto py-1">
       
-      {/* Industrial Grid Texture Backdrop */}
-      <div className="absolute inset-0 bg-industrial-grid opacity-60 pointer-events-none -z-10" />
+      {/* ------------------------------------------------------------- */}
+      {/* COMPACT HEADER (Clean Firebase Console Overview)               */}
+      {/* ------------------------------------------------------------- */}
+      {/* ------------------------------------------------------------- */}
+      {/* COMPACT HEADER (Clean Firebase Console Overview)               */}
+      {/* ------------------------------------------------------------- */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
+            Analytics
+          </h1>
+          <span className="text-gray-600 hidden sm:inline">•</span>
+          <span className="text-xs text-gray-400">
+            Real-time lead extraction & cold outreach
+          </span>
+        </div>
 
-      {/* Industrial Enterprise Hero Section */}
-      <div className="text-center max-w-4xl mx-auto space-y-6 pt-2">
+        <Link
+          href="/jobs"
+          className="firebase-btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 self-start sm:self-auto touch-target justify-center"
+        >
+          <History className="w-3.5 h-3.5 text-gray-400" />
+          <span>Past Jobs History</span>
+        </Link>
+      </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* COMPACT ANALYTICS CARD (Matches Screenshot without Bloat)      */}
+      {/* ------------------------------------------------------------- */}
+      <div className="firebase-card overflow-hidden">
         
-        {/* 3D Robot Logo Graphic */}
-        <div className="flex justify-center mb-1">
-          <div className="relative group">
-            <div className="absolute -inset-6 rounded-full bg-cyan-500/25 blur-3xl group-hover:bg-cyan-500/40 transition duration-500 pointer-events-none"></div>
-            <img 
-              src="/logo.png" 
-              alt="ReachBot AI Robot Logo" 
-              className="w-28 sm:w-36 h-28 sm:h-36 object-contain relative animate-float drop-shadow-[0_15px_30px_rgba(6,182,212,0.45)]"
-            />
+        {/* Card Header Bar */}
+        <div className="px-4 py-2 border-b border-matte-700/80 flex items-center justify-between bg-matte-850/50">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-3.5 h-3.5 text-firebase-400" />
+            <span className="text-xs font-semibold text-white">
+              Operations & Outreach
+            </span>
           </div>
+          <button 
+            type="button" 
+            className="text-gray-400 hover:text-white p-0.5 rounded transition-colors"
+            title="Options"
+          >
+            <MoreVertical className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {/* Enterprise Badge */}
-        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#091020] border border-cyan-500/30 text-cyan-300 text-xs font-mono font-semibold shadow-xl shadow-cyan-500/10 backdrop-blur-md">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="uppercase tracking-wider">ReachBot AI B2B Contact & Lead Intelligence</span>
+        {/* 3 Metric Columns */}
+        <div className="p-3.5 sm:p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 divide-y sm:divide-y-0 sm:divide-x divide-matte-700/60">
+          
+          {/* Metric 1 */}
+          <div className="space-y-0.5 sm:pr-3">
+            <div className="text-[11px] font-medium text-gray-400">
+              Daily active contacts
+            </div>
+            <div className="text-xl font-mono font-bold text-white tracking-wide">
+              ---
+            </div>
+            <div className="text-[10px] text-gray-400 font-mono">
+              MX & DNS Deliverability
+            </div>
+          </div>
+
+          {/* Metric 2 */}
+          <div className="pt-2 sm:pt-0 sm:px-3 space-y-0.5">
+            <div className="text-[11px] font-medium text-gray-400">
+              Host deduplication
+            </div>
+            <div className="text-xl font-mono font-bold text-emerald-400 tracking-wide">
+              100%
+            </div>
+            <div className="text-[10px] text-gray-400 font-mono">
+              1 email per multi-site owner
+            </div>
+          </div>
+
+          {/* Metric 3 */}
+          <div className="pt-2 sm:pt-0 sm:pl-3 space-y-0.5">
+            <div className="text-[11px] font-medium text-gray-400">
+              Gemini key rotator
+            </div>
+            <div className="text-xl font-mono font-bold text-firebase-400 tracking-wide">
+              Active
+            </div>
+            <div className="text-[10px] text-gray-400 font-mono">
+              4 models with auto-failover
+            </div>
+          </div>
+
         </div>
 
-        {/* Industrial Headline */}
-        <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1]">
-          Automated B2B Lead <br />
-          <span className="gradient-text-industrial">
-            Contact Intelligence
-          </span>{' '}
-          At Scale
-        </h1>
-
-        {/* Industrial Subtitle */}
-        <p className="text-base sm:text-lg text-gray-300 leading-relaxed max-w-2xl mx-auto font-sans">
-          Crawl websites or directory databases automatically. Extract verified executive emails, decision-maker contacts, and social metadata — <span className="text-cyan-300 font-semibold">with dummy emails filtered out completely</span>.
-        </p>
-
-        {/* Industrial Feature Badges */}
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-2 text-xs font-mono text-gray-300">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#090e1c] border border-emerald-500/30 text-emerald-300 shadow-sm">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>Working Email Filtering</span>
+        {/* Compact Sub-Table Status Row */}
+        <div className="border-t border-matte-700/80 px-4 py-2 bg-matte-850/40 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1.5">
+          <div className="flex items-center gap-2">
+            <Code2 className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="font-semibold text-white text-[11px]">Engine:</span>
+            <span className="text-[11px] text-gray-300 font-mono">Playwright + HTTPX Fast Scraper</span>
           </div>
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#090e1c] border border-cyan-500/30 text-cyan-300 shadow-sm">
-            <Target className="w-4 h-4 text-cyan-400" />
-            <span>Primary Outreach Target</span>
-          </div>
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#090e1c] border border-indigo-500/30 text-indigo-300 shadow-sm">
-            <Lock className="w-4 h-4 text-indigo-400" />
-            <span>SSRF Enterprise Guard</span>
+          <div className="flex items-center gap-4 text-[10px] font-mono text-gray-400">
+            <span>Status: <strong className="text-emerald-400">Active</strong></span>
+            <span>Deliverability: <strong className="text-white">100%</strong></span>
+            <span>Speed: <strong className="text-firebase-400">High Concurrent</strong></span>
           </div>
         </div>
 
       </div>
 
-      {/* Main Upload / Extraction Workspace Card */}
-      <div id="uploader-tool" className="relative max-w-4xl mx-auto">
-        <div className="absolute -inset-1.5 rounded-3xl bg-gradient-to-r from-cyan-500/20 via-blue-600/15 to-indigo-500/20 blur-2xl pointer-events-none -z-10" />
+      {/* ------------------------------------------------------------- */}
+      {/* COMPACT EXTRACTION STUDIO (Target Input Workspace)            */}
+      {/* ------------------------------------------------------------- */}
+      <div className="firebase-card p-4 sm:p-5 space-y-4">
+        <div className="border-b border-matte-700/80 pb-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-firebase-400" />
+            <h2 className="text-xs sm:text-sm font-bold text-white">
+              Target Website Extraction Studio
+            </h2>
+          </div>
+          <span className="text-[10px] font-mono text-emerald-400">
+            ✓ 100% Primary Emails
+          </span>
+        </div>
+
         <FileUploader onJobCreated={handleJobCreated} />
-      </div>
-
-      {/* Industrial Metric Counter Ribbon */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 rounded-2xl bg-[#080d1a] border border-white/10 backdrop-blur-xl text-center shadow-2xl">
-        <div className="space-y-1">
-          <div className="font-display text-2xl sm:text-3xl font-extrabold text-white gradient-text">100%</div>
-          <div className="text-xs font-mono text-gray-400">Working Email Verification</div>
-        </div>
-        <div className="space-y-1">
-          <div className="font-display text-2xl sm:text-3xl font-extrabold text-white gradient-text-emerald">&lt; 1.2s</div>
-          <div className="text-xs font-mono text-gray-400 font-medium">Avg Domain Scrape Speed</div>
-        </div>
-        <div className="space-y-1">
-          <div className="font-display text-2xl sm:text-3xl font-extrabold text-white gradient-text-amber">99.8%</div>
-          <div className="text-xs font-mono text-gray-400">Decision-Maker Accuracy</div>
-        </div>
-        <div className="space-y-1">
-          <div className="font-display text-2xl sm:text-3xl font-extrabold text-indigo-400 font-mono">HTTPX + JS</div>
-          <div className="text-xs font-mono text-gray-400">Playwright Renderer Engine</div>
-        </div>
-      </div>
-
-      {/* Industrial B2B Feature Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 max-w-4xl mx-auto">
-        
-        <div className="p-6 rounded-2xl glass-card glass-card-hover space-y-3">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-md">
-            <Target className="w-6 h-6" />
-          </div>
-          <h3 className="font-display text-base font-bold text-white">Smart Primary Email Ranking</h3>
-          <p className="text-xs text-gray-300 leading-relaxed font-sans">
-            Ranks candidate emails automatically. Prioritizes CEO, Founder, named executives, and direct webmails over generic info@ aliases.
-          </p>
-        </div>
-
-        <div className="p-6 rounded-2xl glass-card glass-card-hover space-y-3">
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-md">
-            <Layers className="w-6 h-6" />
-          </div>
-          <h3 className="font-display text-base font-bold text-white">Hybrid HTTPX + Playwright</h3>
-          <p className="text-xs text-gray-300 leading-relaxed font-sans">
-            Ultra-fast HTTP scraping engine with automatic Playwright headless browser rendering fallback for heavy JS websites.
-          </p>
-        </div>
-
-        <div className="p-6 rounded-2xl glass-card glass-card-hover space-y-3">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <h3 className="font-display text-base font-bold text-white">Non-Intrusive & Secure</h3>
-          <p className="text-xs text-gray-300 leading-relaxed font-sans">
-            Performs non-intrusive DNS and static deliverability checks to strip dummy emails without sending actual emails.
-          </p>
-        </div>
-
       </div>
 
     </div>

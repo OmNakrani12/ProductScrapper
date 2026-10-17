@@ -10,23 +10,20 @@ export default function ProgressBar({ progress }: ProgressBarProps) {
   const isComplete = progress.status === 'completed';
 
   return (
-    <div className="p-5 rounded-xl bg-card/90 border border-border space-y-3 relative overflow-hidden">
-      {/* Background ambient glow effect */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-accent/10 rounded-full blur-2xl pointer-events-none" />
-
+    <div className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-matte-800 border border-matte-700 space-y-3 relative overflow-hidden shadow-lg">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
           {isComplete ? (
-            <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400">
+            <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex-shrink-0">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           ) : (
-            <div className="p-1.5 rounded-lg bg-accent/20 text-accent">
+            <div className="p-1.5 rounded-lg bg-firebase-600/20 text-firebase-400 border border-firebase-600/30 flex-shrink-0">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
           )}
-          <div>
-            <h3 className="text-sm font-semibold text-white">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-white font-display truncate">
               {isComplete ? "Job Crawl Completed" : "Scanning Websites in Background..."}
             </h3>
             <p className="text-xs text-gray-400">
@@ -35,18 +32,17 @@ export default function ProgressBar({ progress }: ProgressBarProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-2xl font-bold text-accent tracking-tight">{percent}%</span>
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          <span className="text-xl sm:text-2xl font-extrabold text-firebase-400 font-display tracking-tight">{percent}%</span>
         </div>
       </div>
 
       {/* Bar container */}
-      <div className="w-full h-3 bg-surface rounded-full overflow-hidden p-0.5 border border-border/80">
+      <div className="w-full h-2.5 bg-matte-900 rounded-full overflow-hidden p-0.5 border border-matte-700">
         <div 
-          className="h-full bg-gradient-to-r from-accent-600 via-accent to-amber-400 rounded-full transition-all duration-500 ease-out relative"
+          className="h-full bg-firebase-600 rounded-full transition-all duration-500 ease-out relative shadow-sm"
           style={{ width: `${percent}%` }}
         >
-          {/* Subtle light shimmer animation */}
           {!isComplete && (
             <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full" />
           )}
@@ -55,10 +51,10 @@ export default function ProgressBar({ progress }: ProgressBarProps) {
 
       {/* Currently scanning indicator */}
       {!isComplete && progress.current_website && (
-        <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
-          <Zap className="w-3.5 h-3.5 text-accent animate-bounce" />
-          <span>Current Target:</span>
-          <span className="font-mono text-gray-200 truncate max-w-md">{progress.current_website}</span>
+        <div className="flex items-center gap-2 text-xs text-gray-400 pt-1 min-w-0">
+          <Zap className="w-3.5 h-3.5 text-firebase-400 flex-shrink-0" />
+          <span className="flex-shrink-0">Current Target:</span>
+          <span className="font-mono text-gray-200 truncate max-w-[160px] sm:max-w-md">{progress.current_website}</span>
         </div>
       )}
     </div>

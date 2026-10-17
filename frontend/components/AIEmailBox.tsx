@@ -53,8 +53,20 @@ export default function AIEmailBox({
   
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showConfig, setShowConfig] = useState<boolean>(!result.ai_email_body);
+  const [showConfig, setShowConfig] = useState<boolean>(true);
   const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
+
+  const applyPreset = (preset: 'host' | 'partner' | 'audit' | 'pitch') => {
+    if (preset === 'host') {
+      setInstruction('Visit this website and invite that website host to host their platform with us. Highlight our 99.99% uptime, ultra-low latency, and free migration assistance.');
+    } else if (preset === 'partner') {
+      setInstruction('Explore this website and craft an authentic B2B strategic partnership and collaboration pitch tailored to their core services.');
+    } else if (preset === 'audit') {
+      setInstruction('Review this website and offer a complimentary performance, security, and SEO audit with actionable optimization findings.');
+    } else if (preset === 'pitch') {
+      setInstruction('Write a persuasive B2B cold outreach pitch introducing our software platform and asking for a short 5-minute exploratory chat this week.');
+    }
+  };
 
   const recipientEmail = result.primary_email || (result.emails && result.emails[0]) || '';
   const domain = result.website_url.replace(/^https?:\/\//i, '').split('/')[0] || result.website_url;
@@ -308,16 +320,49 @@ export default function AIEmailBox({
             </div>
 
             {/* Instruction prompt */}
-            <div className="sm:col-span-2 space-y-1">
-              <label className="text-[11px] font-bold text-purple-300 uppercase tracking-wider block">
-                Custom Prompt / Objective:
-              </label>
+            <div className="sm:col-span-2 space-y-1.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <label className="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Custom AI Prompt / Value Proposition:</span>
+                </label>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('host')}
+                    className="px-1.5 py-0.5 text-[10px] rounded bg-purple-900/60 text-purple-200 border border-purple-500/40 hover:bg-purple-800 transition-colors"
+                  >
+                    🚀 Host
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('partner')}
+                    className="px-1.5 py-0.5 text-[10px] rounded bg-purple-900/60 text-purple-200 border border-purple-500/40 hover:bg-purple-800 transition-colors"
+                  >
+                    🤝 Partner
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('audit')}
+                    className="px-1.5 py-0.5 text-[10px] rounded bg-purple-900/60 text-purple-200 border border-purple-500/40 hover:bg-purple-800 transition-colors"
+                  >
+                    🔍 Audit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset('pitch')}
+                    className="px-1.5 py-0.5 text-[10px] rounded bg-purple-900/60 text-purple-200 border border-purple-500/40 hover:bg-purple-800 transition-colors"
+                  >
+                    💼 Pitch
+                  </button>
+                </div>
+              </div>
               <textarea
-                rows={2}
+                rows={3}
                 value={instruction}
                 onChange={(e) => setInstruction(e.target.value)}
                 placeholder="e.g. visit all websites and invite that website host to host platform..."
-                className="w-full p-2.5 rounded-xl bg-black/60 border border-purple-500/40 text-xs text-white font-sans focus:border-purple-400 focus:outline-none"
+                className="w-full p-3 rounded-xl bg-black/80 border-2 border-purple-500/50 text-xs text-white font-sans focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 focus:outline-none shadow-inner leading-relaxed"
               />
             </div>
           </div>
@@ -426,18 +471,17 @@ export default function AIEmailBox({
                   {body}
                 </div>
               )}
-            </div>
-
-            {/* Bottom Actions Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
+            </div>            {/* Bottom Actions Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-3 border-t border-white/10">
               <div className="flex flex-wrap items-center gap-2">
                 {/* Copy Full Email */}
                 <button
+                  type="button"
                   onClick={() => {
                     const full = `Subject: ${subject}\n\n${body}`;
                     handleCopy(full, 'full');
                   }}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-gray-200 bg-white/5 border border-white/10 hover:border-white/20 rounded-xl flex items-center gap-1.5 transition-all"
+                  className="px-3.5 py-2 sm:py-1.5 text-xs font-semibold text-gray-200 bg-white/5 border border-white/10 hover:border-white/20 rounded-xl flex items-center gap-1.5 transition-all touch-target sm:min-h-0"
                 >
                   {copiedKey === 'full' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedKey === 'full' ? 'Full Email Copied!' : 'Copy Full Email'}</span>
@@ -447,7 +491,7 @@ export default function AIEmailBox({
                 {recipientEmail && (
                   <a
                     href={mailtoHref}
-                    className="px-3.5 py-1.5 text-xs font-semibold text-cyan-300 bg-cyan-950/30 border border-cyan-500/30 hover:border-cyan-500/50 rounded-xl flex items-center gap-1.5 transition-all"
+                    className="px-3.5 py-2 sm:py-1.5 text-xs font-semibold text-cyan-300 bg-cyan-950/30 border border-cyan-500/30 hover:border-cyan-500/50 rounded-xl flex items-center gap-1.5 transition-all touch-target sm:min-h-0"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Open in Email Client</span>
@@ -459,16 +503,18 @@ export default function AIEmailBox({
                 {isEditing ? (
                   <>
                     <button
+                      type="button"
                       onClick={() => setIsEditing(false)}
                       disabled={isSaving}
-                      className="px-3 py-1.5 text-xs font-semibold text-gray-400 hover:text-white rounded-xl transition-all"
+                      className="px-3 py-2 sm:py-1.5 text-xs font-semibold text-gray-400 hover:text-white rounded-xl transition-all touch-target sm:min-h-0"
                     >
                       Cancel
                     </button>
                     <button
+                      type="button"
                       onClick={handleSaveEdit}
                       disabled={isSaving}
-                      className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl flex items-center gap-1.5 shadow-md transition-all disabled:opacity-50"
+                      className="px-3.5 py-2 sm:py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl flex items-center gap-1.5 shadow-md transition-all disabled:opacity-50 touch-target sm:min-h-0"
                     >
                       {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                       <span>Save Changes</span>
@@ -476,12 +522,13 @@ export default function AIEmailBox({
                   </>
                 ) : (
                   <button
+                    type="button"
                     onClick={() => {
                       setEditSubject(subject);
                       setEditBody(body);
                       setIsEditing(true);
                     }}
-                    className="px-3 py-1.5 text-xs font-semibold text-purple-300 hover:text-white bg-purple-950/40 border border-purple-500/30 hover:border-purple-400 rounded-xl flex items-center gap-1.5 transition-all"
+                    className="px-3.5 py-2 sm:py-1.5 text-xs font-semibold text-purple-300 hover:text-white bg-purple-950/40 border border-purple-500/30 hover:border-purple-400 rounded-xl flex items-center gap-1.5 transition-all touch-target sm:min-h-0"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                     <span>Edit Draft</span>

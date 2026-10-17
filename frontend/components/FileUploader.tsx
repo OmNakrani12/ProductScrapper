@@ -184,49 +184,49 @@ export default function FileUploader({ onJobCreated }: FileUploaderProps) {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6">
-      {/* Upload Header Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-2 gap-2">
-        <div className="flex items-center flex-wrap gap-1.5">
+    <div className="w-full max-w-3xl mx-auto space-y-4">
+      {/* Upload Header Tabs (Compact Firebase Console Style) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-matte-700/80 pb-2.5 gap-2">
+        <div className="flex items-center flex-wrap gap-1 p-1 rounded-lg bg-matte-900 border border-matte-700/80 w-full sm:w-auto">
           <button
             onClick={() => { setActiveTab('upload'); setError(null); }}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`flex-1 sm:flex-initial px-3 py-2 sm:py-1 text-xs font-semibold rounded-md transition-all text-center touch-target sm:min-h-0 flex items-center justify-center ${
               activeTab === 'upload'
-                ? 'bg-card text-white border border-border shadow-sm'
+                ? 'bg-firebase-600 text-white shadow-sm'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            File Upload (CSV / XLSX)
+            File Upload
           </button>
           <button
             onClick={() => { setActiveTab('manual'); setError(null); }}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+            className={`flex-1 sm:flex-initial px-3 py-2 sm:py-1 text-xs font-semibold rounded-md transition-all text-center touch-target sm:min-h-0 flex items-center justify-center ${
               activeTab === 'manual'
-                ? 'bg-card text-white border border-border shadow-sm'
+                ? 'bg-firebase-600 text-white shadow-sm'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            Direct URLs Input
+            Direct URLs
           </button>
           <button
             onClick={() => { setActiveTab('directory'); setError(null); }}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`w-full sm:w-auto px-3 py-2 sm:py-1 text-xs font-semibold rounded-md transition-all flex items-center justify-center gap-1.5 touch-target sm:min-h-0 ${
               activeTab === 'directory'
-                ? 'bg-accent/20 text-accent border border-accent/40 shadow-sm font-bold'
-                : 'text-gray-400 hover:text-accent'
+                ? 'bg-firebase-600 text-white shadow-sm font-bold'
+                : 'text-gray-400 hover:text-white'
             }`}
           >
-            <Compass className="w-3.5 h-3.5 text-accent" />
-            <span>Directory Product Finder</span>
+            <Compass className="w-3.5 h-3.5" />
+            <span>Directory Finder</span>
           </button>
         </div>
-        <span className="text-[11px] text-accent font-medium flex items-center gap-1">
-          <Sparkles className="w-3.5 h-3.5" /> Contact Extraction AI
+        <span className="text-[11px] text-firebase-400 font-medium flex items-center gap-1 font-mono self-end sm:self-auto">
+          <Sparkles className="w-3 h-3" /> MX & DNS Deliverability
         </span>
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-rose-950/50 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+        <div className="p-2.5 rounded-lg bg-rose-950/50 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
           <span>{error}</span>
         </div>
@@ -234,18 +234,18 @@ export default function FileUploader({ onJobCreated }: FileUploaderProps) {
 
       {activeTab === 'upload' ? (
         <div>
-          {/* Dropzone Card */}
+          {/* Dropzone Card - Compact */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`relative p-8 sm:p-12 rounded-2xl border-2 border-dashed transition-all duration-200 cursor-pointer text-center group ${
+            className={`relative p-5 sm:p-6 rounded-xl border-2 border-dashed transition-all duration-150 cursor-pointer text-center group ${
               isDragging
-                ? 'border-accent bg-accent/10 scale-[1.01]'
+                ? 'border-firebase-500 bg-firebase-600/10'
                 : file
-                ? 'border-emerald-500/50 bg-emerald-950/10'
-                : 'border-border hover:border-accent/50 bg-card/60 hover:bg-card/90'
+                ? 'border-emerald-500/50 bg-emerald-950/20'
+                : 'border-matte-700 hover:border-firebase-500/60 bg-matte-850 hover:bg-matte-800'
             }`}
           >
             <input
@@ -256,32 +256,29 @@ export default function FileUploader({ onJobCreated }: FileUploaderProps) {
               className="hidden"
             />
 
-            <div className="max-w-md mx-auto space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/20 to-amber-500/10 border border-accent/30 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform shadow-lg shadow-accent/10">
-                <UploadCloud className="w-8 h-8 text-accent" />
+            <div className="max-w-sm mx-auto space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-firebase-600/15 border border-firebase-500/30 flex items-center justify-center mx-auto text-firebase-400">
+                <UploadCloud className="w-5 h-5" />
               </div>
 
               {file ? (
-                <div className="space-y-2">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-sm font-medium">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-xs font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     <span className="font-mono">{file.name}</span>
-                    <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
+                    <span className="text-[10px] text-gray-400">({(file.size / 1024).toFixed(1)} KB)</span>
                   </div>
-                  <p className="text-xs text-gray-400">Click or drag a different file to replace</p>
+                  <p className="text-[11px] text-gray-400">Click to change file</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-white tracking-tight">
-                    Upload Target Website List
-                  </h3>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Drag & drop your file here, or click to browse files on your computer.
-                  </p>
-                  <div className="flex items-center justify-center gap-3 pt-2 text-[11px] font-mono text-gray-400">
-                    <span className="px-2 py-0.5 rounded bg-surface border border-border">CSV</span>
-                    <span className="px-2 py-0.5 rounded bg-surface border border-border">XLSX</span>
-                    <span className="px-2 py-0.5 rounded bg-surface border border-border">TXT</span>
+                <div className="space-y-1">
+                  <div className="text-xs font-semibold text-white">
+                    Drop CSV, XLSX, or TXT file here, or click to browse
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-[10px] font-mono text-gray-400">
+                    <span className="px-1.5 py-0.5 rounded bg-surface border border-border">CSV</span>
+                    <span className="px-1.5 py-0.5 rounded bg-surface border border-border">XLSX</span>
+                    <span className="px-1.5 py-0.5 rounded bg-surface border border-border">TXT</span>
                   </div>
                 </div>
               )}
@@ -290,16 +287,16 @@ export default function FileUploader({ onJobCreated }: FileUploaderProps) {
         </div>
       ) : activeTab === 'manual' ? (
         /* Manual URL Textarea */
-        <div className="space-y-3">
+        <div className="space-y-1.5">
           <label className="block text-xs font-medium text-gray-300">
-            Paste website URLs (one URL per line):
+            Target website URLs (one per line):
           </label>
           <textarea
             value={manualText}
             onChange={(e) => setManualText(e.target.value)}
-            rows={7}
-            placeholder={`https://stripe.com\nhttps://openai.com\nhttps://github.com\nexample.com`}
-            className="w-full p-4 bg-card border border-border focus:border-accent focus:outline-none text-xs text-white font-mono rounded-xl placeholder-gray-600 transition-all shadow-inner"
+            rows={4}
+            placeholder={`https://stripe.com\nhttps://openai.com\nexample.com`}
+            className="w-full p-2.5 bg-matte-900 border border-matte-700 focus:border-firebase-500 focus:outline-none text-xs text-white font-mono rounded-lg placeholder-gray-600 transition-all shadow-inner"
           />
         </div>
       ) : (
@@ -343,7 +340,7 @@ export default function FileUploader({ onJobCreated }: FileUploaderProps) {
 
             {/* Input & Discover Action */}
             <div className="space-y-3">
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
                   value={directoryUrl}
@@ -354,12 +351,12 @@ export default function FileUploader({ onJobCreated }: FileUploaderProps) {
                       ? "Directory Pattern with {number} (e.g. https://www.scrolllaunch.com/week/2026/{number})"
                       : "Directory URL (e.g. https://producthunt.com)"
                   }
-                  className="flex-1 px-4 py-2.5 bg-surface border border-border focus:border-accent focus:outline-none text-xs text-white rounded-xl placeholder-gray-500 font-mono shadow-inner"
+                  className="flex-1 px-3.5 py-2.5 bg-surface border border-border focus:border-accent focus:outline-none text-xs text-white rounded-xl placeholder-gray-500 font-mono shadow-inner min-w-0"
                 />
                 <button
                   onClick={handleDiscoverDirectoryProducts}
                   disabled={isExtractingDir || !directoryUrl.trim()}
-                  className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white font-semibold text-xs rounded-xl disabled:opacity-50 transition-all flex items-center gap-2 flex-shrink-0"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-accent hover:bg-accent-hover text-white font-semibold text-xs rounded-xl disabled:opacity-50 transition-all flex items-center justify-center gap-2 flex-shrink-0 touch-target"
                 >
                   {isExtractingDir ? (
                     <>
@@ -516,7 +513,7 @@ export default function FileUploader({ onJobCreated }: FileUploaderProps) {
       )}
 
       {/* Action CTA Button */}
-      <div className="pt-2">
+      <div className="pt-1">
         <button
           onClick={handleStartScan}
           disabled={
@@ -525,20 +522,20 @@ export default function FileUploader({ onJobCreated }: FileUploaderProps) {
             (activeTab === 'manual' && !manualText.trim()) ||
             (activeTab === 'directory' && selectedUrls.size === 0)
           }
-          className="w-full py-4 px-6 bg-gradient-to-r from-accent-600 via-accent to-amber-500 hover:opacity-95 text-white font-bold text-base rounded-xl shadow-xl shadow-accent/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.005] active:scale-[0.99]"
+          className="w-full py-3 sm:py-2.5 px-4 firebase-btn-primary text-white font-semibold text-xs sm:text-sm rounded-lg shadow-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all touch-target"
         >
           {isLoading ? (
             <>
-              <RefreshCw className="w-5 h-5 animate-spin" />
-              <span>Validating & Creating Job...</span>
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <span>Starting Extraction Job...</span>
             </>
           ) : (
             <>
-              <Play className="w-5 h-5 fill-current" />
+              <Play className="w-3.5 h-3.5 fill-current" />
               <span>
                 {activeTab === 'directory'
-                  ? `SCRAPE CONTACTS FOR ${selectedUrls.size} SELECTED PRODUCTS`
-                  : 'START CONTACT SCAN'}
+                  ? `Extract Contacts for ${selectedUrls.size} Products`
+                  : 'Start Contact Extraction'}
               </span>
             </>
           )}

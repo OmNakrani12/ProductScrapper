@@ -200,38 +200,40 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Top Breadcrumb & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
-        <div className="space-y-1">
+    <div className="space-y-3 max-w-6xl mx-auto py-1">
+      {/* Top Header Card - Compact */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-matte-800 border border-matte-700/80 shadow-sm">
+        <div className="space-y-0.5">
           <button
             onClick={() => router.push('/jobs')}
-            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors mb-1"
+            className="inline-flex items-center gap-1 text-[11px] text-gray-400 hover:text-white transition-colors"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Jobs</span>
+            <ArrowLeft className="w-3 h-3 text-firebase-400" />
+            <span>&larr; Jobs</span>
           </button>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white tracking-tight font-mono">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <h1 className="text-base sm:text-lg font-bold text-white tracking-tight font-mono truncate max-w-[180px] sm:max-w-md">
               {progress.filename}
             </h1>
-            <StatusBadge status={progress.status} />
+            <StatusBadge status={progress.status} size="sm" />
           </div>
-          <p className="text-xs text-gray-400">
-            Job ID: <span className="font-mono text-gray-300">{progress.job_id}</span> • Created {formatDate(progress.created_at)}
+          <p className="text-[11px] text-gray-400 font-mono">
+            ID: <span className="text-gray-300">{progress.job_id.slice(0, 8)}</span> • {formatDate(progress.created_at)}
           </p>
         </div>
 
         {/* Action Buttons: AI Campaign & Export */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
           <button
             onClick={() => router.push(`/jobs/${jobId}/campaign`)}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-purple-500/20 flex items-center gap-2 transition-all group"
+            className="flex-1 sm:flex-initial firebase-btn-primary px-3.5 py-2 sm:py-1.5 text-xs font-semibold shadow-sm flex items-center justify-center gap-1.5 touch-target sm:min-h-0"
           >
-            <Sparkles className="w-4 h-4 text-purple-200 group-hover:rotate-12 transition-transform" />
-            <span>AI Campaign & Live Box</span>
+            <Mail className="w-3.5 h-3.5 text-white" />
+            <span>AI Campaign</span>
           </button>
-          <ExportButtons jobId={progress.job_id} />
+          <div className="flex-1 sm:flex-initial">
+            <ExportButtons jobId={progress.job_id} />
+          </div>
         </div>
       </div>
 
