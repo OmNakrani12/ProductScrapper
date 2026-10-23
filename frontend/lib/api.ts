@@ -1,8 +1,7 @@
 import { Job, JobProgress, WebsiteResult, UploadResponse, PaginatedResponse } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL 
-  ? `${process.env.NEXT_PUBLIC_API_URL}/api`
-  : '/api';
+const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim().replace(/\/+$/, '');
+const API_BASE = rawApiUrl ? `${rawApiUrl}/api` : '/api';
 
 async function handleFetch(url: string, options?: RequestInit) {
   try {

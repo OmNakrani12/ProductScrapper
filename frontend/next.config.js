@@ -3,12 +3,11 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   async rewrites() {
+    const rawTarget = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').trim().replace(/\/+$/, '');
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_URL 
-          ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*` 
-          : 'http://localhost:8000/api/:path*',
+        destination: `${rawTarget}/api/:path*`,
       },
     ];
   },
