@@ -23,7 +23,11 @@ try:
         
         # Security
         SECRET_KEY: str = os.getenv("SECRET_KEY", "reachbot_ai_secret_key_change_in_production")
-        ALLOWED_ORIGINS: list[str] = ["*"]
+        ALLOWED_ORIGINS: list[str] = [
+            orig.strip()
+            for orig in os.getenv("ALLOWED_ORIGINS", "*").split(",")
+            if orig.strip()
+        ]
 
         # Real SMTP Email Delivery
         SMTP_HOST: str = os.getenv("SMTP_HOST", "")
@@ -65,8 +69,11 @@ except Exception:
         EXTRACT_PHONES: bool = os.getenv("EXTRACT_PHONES", "false").lower() == "true"
         
         # Security
-        SECRET_KEY: str = os.getenv("SECRET_KEY", "reachbot_ai_secret_key_change_in_production")
-        ALLOWED_ORIGINS: list[str] = ["*"]
+        ALLOWED_ORIGINS: list[str] = [
+            orig.strip()
+            for orig in os.getenv("ALLOWED_ORIGINS", "*").split(",")
+            if orig.strip()
+        ]
         
         SMTP_HOST: str = os.getenv("SMTP_HOST", "")
         SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
